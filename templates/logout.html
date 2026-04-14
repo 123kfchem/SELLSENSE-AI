@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card auth-card">
+    <h2 class="mb-2">Logged Out</h2>
+    <p class="mb-3">Thank you for using SellSense AI.</p>
+    <a class="btn btn-primary" href="{% url 'login' %}">Back to Login</a>
+</section>
+{% endblock %}

@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card auth-card">
+    <h2 class="mb-3">Business Login</h2>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" class="btn btn-primary w-100">Sign In</button>
+    </form>
+</section>
+
+{% endblock %}

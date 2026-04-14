@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+    <h2>{{ period|title }} Sales Report</h2>
+    <p>Total Units: {{ units }}</p>
+    <p>Total Revenue: {{ revenue }}</p>
+    <div class="table-responsive">
+    <table class="table table-striped table-hover align-middle">
+        <thead>
+            <tr><th>Item</th><th>Qty</th><th>Amount</th><th>Payment</th><th>Report Value</th><th>Date</th></tr>
+        </thead>
+        <tbody>
+            {% for sale in sales %}
+            <tr>
+                <td>{{ sale.item.name }}</td>
+                <td>{{ sale.quantity }}</td>
+                <td>{{ sale.total_amount }}</td>
+                <td>{{ sale.payment_method }}</td>
+                <td>{{ sale.report_payment_value }}</td>
+                <td>{{ sale.sold_at }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6">No sales in this period.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</section>
+
+<section class="card">
+    <h2>ML Data Analysis Table</h2>
+    <p>Machine-learning style trend scoring for demand, risk, and growth opportunity.</p>
+    <div class="table-responsive">
+    <table class="table table-striped table-hover align-middle">
+        <thead>
+            <tr>
+                <th>Item</th>
+                <th>Total Qty</th>
+                <th>Avg Daily Qty</th>
+                <th>Revenue</th>
+                <th>Demand Score</th>
+                <th>Trend Score</th>
+                <th>Risk Score</th>
+                <th>Opportunity</th>
+                <th>Recommendation</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in ml_analysis_rows %}
+            <tr>
+                <td>{{ row.item }}</td>
+                <td>{{ row.total_qty }}</td>
+                <td>{{ row.avg_daily_qty }}</td>
+                <td>{{ row.revenue }}</td>
+                <td>{{ row.demand_score }}</td>
+                <td>{{ row.trend_score }}</td>
+                <td>{{ row.risk_score }}</td>
+                <td>{{ row.opportunity_score }}</td>
+                <td>{{ row.recommendation }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="9">Not enough sales data to generate ML analysis yet.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</section>
+{% endblock %}

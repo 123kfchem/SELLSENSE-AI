@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="grid two-col">
+    <div class="card">
+        <h2>Employee Dashboard</h2>
+        <p>Select items for customers and process payment.</p>
+        <form method="post" id="sale-form">
+            {% csrf_token %}
+            {{ sale_form.as_p }}
+            <button type="submit">Process Payment</button>
+        </form>
+    </div>
+
+    <div class="card">
+        <h2>Today Sales Overview</h2>
+        <p>Units sold: {{ daily_units }}</p>
+        <p>Total revenue: {{ daily_revenue }}</p>
+    </div>
+</section>
+
+<section class="card">
+    <h2>Daily Sales</h2>
+    <div class="table-responsive">
+    <table class="table table-striped table-hover align-middle">
+        <thead>
+            <tr><th>Item</th><th>Qty</th><th>Payment</th><th>Reported Value</th><th>Time</th></tr>
+        </thead>
+        <tbody>
+            {% for sale in daily_sales %}
+            <tr>
+                <td>{{ sale.item.name }}</td>
+                <td>{{ sale.quantity }}</td>
+                <td>{{ sale.payment_method }}</td>
+                <td>{{ sale.report_payment_value }}</td>
+                <td>{{ sale.sold_at }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5">No sales recorded today.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</section>
+{% endblock %}

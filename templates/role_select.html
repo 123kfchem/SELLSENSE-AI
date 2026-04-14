@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+    <h2 class="mb-2">Select Role</h2>
+    <p>Choose how you want to use the system for this session.</p>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" class="btn btn-primary">Continue</button>
+    </form>
+</section>
+{% endblock %}
