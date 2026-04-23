@@ -19,6 +19,10 @@ from .forms import (
 )
 from .models import Item, ItemReport, UserProfile
 from .services import ai_item_suggestions, ml_sales_analysis_table, sales_summary
+from django.http import HttpResponse
+
+def home(request):
+    return HttpResponse("SELLSENSE AI is live 🚀")
 
 REGISTRATION_MANAGER_USERNAME = "erickmonyancha"
 
