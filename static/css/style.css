@@ -25,6 +25,26 @@ body {
     text-decoration: none;
 }
 
+.topbar .brand {
+    margin-left: 0;
+}
+
+.nav-links a {
+    margin-left: 0;
+    font-weight: 600;
+}
+
+.home-hero {
+    padding: 28px;
+}
+
+.offering {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 14px;
+}
+
 .container {
     max-width: 1100px;
     margin: 20px auto;

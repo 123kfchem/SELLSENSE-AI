@@ -6,6 +6,7 @@ from django.contrib.auth.views import LoginView
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.contrib.auth.models import User
 
 from .forms import (
@@ -24,6 +25,18 @@ REGISTRATION_MANAGER_USERNAME = "erickmonyancha"
 
 class BusinessLoginView(LoginView):
     template_name = "login.html"
+
+    def get_success_url(self):
+        profile, _ = UserProfile.objects.get_or_create(user=self.request.user)
+        if profile.role == UserProfile.ROLE_EMPLOYER and profile.is_business_active:
+            return reverse("employer-dashboard")
+        if profile.role == UserProfile.ROLE_EMPLOYEE and profile.is_business_active:
+            return reverse("employee-dashboard")
+        return reverse("role-select")
+
+
+def home(request):
+    return render(request, "home.html")
 
 
 def business_logout(request):

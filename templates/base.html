@@ -9,24 +9,22 @@
 </head>
 <body>
     <header class="topbar navbar navbar-expand-lg">
-        <h1 class="h4 mb-0">SellSense AI</h1>
-        {% if user.is_authenticated %}
-            <nav class="d-flex align-items-center gap-3">
-                <span class="text-light">
-                    Role:
-                    {% if user.profile.role %}
-                        {{ user.profile.get_role_display }}
-                    {% else %}
-                        Not selected
-                    {% endif %}
-                </span>
-                <a class="btn btn-outline-light btn-sm" href="{% url 'role-select' %}">Role</a>
+        <a class="brand h4 mb-0 text-decoration-none text-light" href="{% url 'home' %}">SellSense AI</a>
+        <nav class="nav-links d-flex align-items-center gap-2 gap-lg-3">
+            <a href="{% url 'home' %}">Home</a>
+            <a href="{% url 'home' %}#about">About</a>
+            <a href="{% url 'home' %}#services">Services</a>
+            <a href="{% url 'home' %}#contact">Contact Us</a>
+            {% if user.is_authenticated %}
+                <a href="{% url 'role-select' %}">Dashboard</a>
                 {% if user.username == "erickmonyancha" %}
-                    <a class="btn btn-outline-light btn-sm" href="{% url 'business-register' %}">Register Business</a>
+                    <a href="{% url 'business-register' %}">Register Business</a>
                 {% endif %}
-                <a class="btn btn-light btn-sm" href="{% url 'logout' %}">Logout</a>
-            </nav>
-        {% endif %}
+                <a class="btn btn-light btn-sm px-3" href="{% url 'logout' %}">Logout</a>
+            {% else %}
+                <a class="btn btn-light btn-sm px-3" href="{% url 'login' %}">Login</a>
+            {% endif %}
+        </nav>
     </header>
    
 

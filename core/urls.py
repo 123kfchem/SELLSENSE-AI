@@ -5,12 +5,14 @@ from .views import (
     business_logout,
     employee_dashboard,
     employer_dashboard,
+    home,
     reports_view,
     role_select,
 )
 
 urlpatterns = [
-    path("", BusinessLoginView.as_view(), name="login"),
+    path("", home, name="home"),
+    path("login/", BusinessLoginView.as_view(), name="login"),
     path("register-business/", business_register, name="business-register"),
     path("logout/", business_logout, name="logout"),
     path("role-select/", role_select, name="role-select"),
