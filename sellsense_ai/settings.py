@@ -55,7 +55,7 @@ DATABASES = {
         "ENGINE": "django.db.backends.mysql",
         "NAME": "123kfchem$SELLSENSE-AI",
         "USER": "123kfchem",
-        "PASSWORD": "1234@2005Erick.,
+        "PASSWORD": "1234@2005Erick.",
         "HOST": "123kfchem.mysql.pythonanywhere-services.com",
         "PORT": "3306",
         "OPTIONS": {"init_command": "SET sql_mode='STRICT_TRANS_TABLES'"},
