@@ -7,23 +7,27 @@
         <form method="post" id="sale-form">
             {% csrf_token %}
             {{ sale_form.as_p }}
+            <p><strong>Auto Amount:</strong> <span id="sale-total-preview">0.00</span></p>
             <button type="submit">Process Payment</button>
         </form>
     </div>
 
     <div class="card">
         <h2>Today Sales Overview</h2>
-        <p>Units sold: {{ daily_units }}</p>
-        <p>Total revenue: {{ daily_revenue }}</p>
+        <p>All units sold: {{ daily_units }}</p>
+        <p>All revenue: {{ daily_revenue }}</p>
+        <p>Your units sold: {{ my_daily_units }}</p>
+        <p>Your revenue: {{ my_daily_revenue }}</p>
     </div>
 </section>
+{{ item_prices|json_script:"item-price-data" }}
 
 <section class="card">
     <h2>Daily Sales</h2>
     <div class="table-responsive">
     <table class="table table-striped table-hover align-middle">
         <thead>
-            <tr><th>Item</th><th>Qty</th><th>Payment</th><th>Reported Value</th><th>Time</th></tr>
+            <tr><th>Item</th><th>Qty</th><th>Payment</th><th>Reported Value</th><th>Sold By</th><th>Time</th></tr>
         </thead>
         <tbody>
             {% for sale in daily_sales %}
@@ -32,10 +36,11 @@
                 <td>{{ sale.quantity }}</td>
                 <td>{{ sale.payment_method }}</td>
                 <td>{{ sale.report_payment_value }}</td>
-                <td>{{ sale.sold_at }}</td>
+                <td>{{ sale.sold_by.username|default:"N/A" }}</td>
+                <td>{{ sale.sold_at|date:"Y-m-d H:i" }}</td>
             </tr>
             {% empty %}
-            <tr><td colspan="5">No sales recorded today.</td></tr>
+            <tr><td colspan="6">No sales recorded today.</td></tr>
             {% endfor %}
         </tbody>
     </table>

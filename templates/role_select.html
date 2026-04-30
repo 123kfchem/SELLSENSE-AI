@@ -5,7 +5,18 @@
     <p>Choose how you want to use the system for this session.</p>
     <form method="post">
         {% csrf_token %}
-        {{ form.as_p }}
+        {{ form.non_field_errors }}
+        <p>
+            <label for="{{ form.role.id_for_label }}">Role</label>
+            {{ form.role }}
+            {{ form.role.errors }}
+        </p>
+        <p id="employer-password-wrapper">
+            <label for="{{ form.employer_password.id_for_label }}">Employer Password</label>
+            {{ form.employer_password }}
+            {{ form.employer_password.errors }}
+            {% if form.employer_password.help_text %}<small>{{ form.employer_password.help_text }}</small>{% endif %}
+        </p>
         <button type="submit" class="btn btn-primary">Continue</button>
     </form>
 </section>

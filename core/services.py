@@ -50,13 +50,15 @@ def ai_item_suggestions():
 
 def sales_summary(period="daily"):
     now = timezone.now()
-    start = now.date()
+    local_now = timezone.localtime(now)
+    start_local = local_now.replace(hour=0, minute=0, second=0, microsecond=0)
     if period == "weekly":
-        start = (now - timedelta(days=7)).date()
+        start_local = start_local - timedelta(days=7)
     elif period == "monthly":
-        start = (now - timedelta(days=30)).date()
+        start_local = start_local - timedelta(days=30)
+    start = start_local
 
-    sales = Sale.objects.filter(sold_at__date__gte=start).select_related("item", "sold_by")
+    sales = Sale.objects.filter(sold_at__gte=start).select_related("item", "sold_by")
     total_revenue = sales.aggregate(total=Sum("total_amount"))["total"] or Decimal("0.00")
     total_units = sales.aggregate(total=Sum("quantity"))["total"] or 0
     return sales, total_revenue, total_units
@@ -68,16 +70,19 @@ def ml_sales_analysis_table(period="daily"):
     Returns per-item demand/risk/opportunity insights for the selected period.
     """
     now = timezone.now()
-    start = now.date()
+    local_now = timezone.localtime(now)
+    start_local = local_now.replace(hour=0, minute=0, second=0, microsecond=0)
     window_days = 1
     if period == "weekly":
-        start = (now - timedelta(days=7)).date()
+        start_local = start_local - timedelta(days=7)
         window_days = 7
     elif period == "monthly":
-        start = (now - timedelta(days=30)).date()
+        start_local = start_local - timedelta(days=30)
         window_days = 30
+    start = start_local.date()
+    start_dt = start_local
 
-    qs = Sale.objects.filter(sold_at__date__gte=start).values(
+    qs = Sale.objects.filter(sold_at__gte=start_dt).values(
         "item__id", "item__name", "sold_at__date"
     ).annotate(
         qty=Sum("quantity"), revenue=Sum("total_amount")
@@ -95,7 +100,11 @@ def ml_sales_analysis_table(period="daily"):
         item_name[item_id] = row["item__name"]
         item_revenue[item_id] += float(row["revenue"] or 0)
         date_key = row["sold_at__date"]
+        if date_key is None:
+            continue
         day_idx = (date_key - start).days
+        if day_idx < 0 or day_idx >= window_days:
+            continue
         daily_item_qty[item_id][day_idx] += float(row["qty"] or 0)
 
     rows = []

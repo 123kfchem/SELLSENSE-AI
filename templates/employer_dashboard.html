@@ -7,6 +7,7 @@
         <button type="button" class="tab-btn" data-tab-target="tab-ai">AI Suggestions</button>
         <button type="button" class="tab-btn" data-tab-target="tab-analysis">Data Analysis</button>
         <button type="button" class="tab-btn" data-tab-target="tab-reports">Quick Reports</button>
+        <button type="button" class="tab-btn" data-tab-target="tab-analytics">Analytics Charts</button>
     </div>
 
     <div id="tab-items" class="tab-panel active">
@@ -20,6 +21,15 @@
                     <button type="submit" class="btn btn-primary">Add Item</button>
                 </form>
             </div>
+            <div class="card">
+                <h3>Record Sale</h3>
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="record_sale">
+                    {{ sale_form.as_p }}
+                    <button type="submit" class="btn btn-success">Record Sale</button>
+                </form>
+            </div>
         </section>
 
         <section class="card">
@@ -27,7 +37,7 @@
             <div class="table-responsive">
             <table class="table table-striped table-hover align-middle">
                 <thead>
-                    <tr><th>Name</th><th>Category</th><th>Price</th><th>Status</th><th>Actions</th></tr>
+                    <tr><th>Name</th><th>Category</th><th>Price</th><th>Initial Qty</th><th>Current Qty</th><th>Status</th><th>Actions</th></tr>
                 </thead>
                 <tbody>
                     {% for item in items %}
@@ -35,6 +45,8 @@
                         <td>{{ item.name }}</td>
                         <td>{{ item.category }}</td>
                         <td>{{ item.unit_price }}</td>
+                        <td>{{ item.initial_quantity }}</td>
+                        <td>{{ item.current_quantity }}</td>
                         <td>{{ item.status }}</td>
                         <td>
                             <form method="post" class="inline">{% csrf_token %}
@@ -55,6 +67,53 @@
                             </form>
                         </td>
                     </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            </div>
+        </section>
+
+        <section class="card">
+            <h3>Stock Insights</h3>
+            <div class="table-responsive">
+            <table class="table table-striped table-hover align-middle" id="stock-insights-table">
+                <thead>
+                    <tr><th>Item</th><th>Total Sold</th><th>Remaining Stock</th></tr>
+                </thead>
+                <tbody>
+                    {% for item in stock_insights %}
+                    <tr>
+                        <td>{{ item.name }}</td>
+                        <td>{{ item.total_sold }}</td>
+                        <td>{{ item.current_quantity }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="3">No stock insights available.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            </div>
+        </section>
+
+        <section class="card">
+            <h3>Today's Sales Log</h3>
+            <div class="table-responsive">
+            <table class="table table-striped table-hover align-middle">
+                <thead>
+                    <tr><th>Item</th><th>Qty</th><th>Payment</th><th>Total</th><th>Sold By</th><th>Time</th></tr>
+                </thead>
+                <tbody>
+                    {% for sale in daily_sales %}
+                    <tr>
+                        <td>{{ sale.item.name }}</td>
+                        <td>{{ sale.quantity }}</td>
+                        <td>{{ sale.payment_method }}</td>
+                        <td>{{ sale.total_amount }}</td>
+                        <td>{{ sale.sold_by.username|default:"N/A" }}</td>
+                        <td>{{ sale.sold_at|date:"Y-m-d H:i" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="6">No sales recorded today.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
@@ -137,5 +196,17 @@
             </div>
         </section>
     </div>
+
+    <div id="tab-analytics" class="tab-panel">
+        <section class="card">
+            <h3>Sales Distribution (Pie)</h3>
+            <canvas id="sales-pie-chart" height="180"></canvas>
+        </section>
+        <section class="card">
+            <h3>Items Sold (Bar)</h3>
+            <canvas id="sales-bar-chart" height="180"></canvas>
+        </section>
+    </div>
 </section>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 {% endblock %}

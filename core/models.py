@@ -1,5 +1,6 @@
 from decimal import Decimal
 from django.contrib.auth.models import User
+from django.contrib.auth.hashers import check_password, make_password
 from django.db import models
 
 
@@ -17,9 +18,18 @@ class UserProfile(models.Model):
     phone_number = models.CharField(max_length=30, blank=True)
     location = models.CharField(max_length=180, blank=True)
     is_business_active = models.BooleanField(default=True)
+    employer_password_hash = models.CharField(max_length=255, blank=True)
 
     def __str__(self):
         return f"{self.user.username} - {self.role or 'unassigned'}"
+
+    def set_employer_password(self, raw_password):
+        self.employer_password_hash = make_password(raw_password or "")
+
+    def check_employer_password(self, raw_password):
+        if not self.employer_password_hash:
+            return False
+        return check_password(raw_password, self.employer_password_hash)
 
 
 class Item(models.Model):
@@ -36,6 +46,8 @@ class Item(models.Model):
     category = models.CharField(max_length=120, blank=True)
     unit_price = models.DecimalField(max_digits=10, decimal_places=2)
     stock_qty = models.PositiveIntegerField(default=0)
+    initial_quantity = models.PositiveIntegerField(default=0)
+    current_quantity = models.PositiveIntegerField(default=0)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_ACTIVE)
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name="created_items")
     created_at = models.DateTimeField(auto_now_add=True)
