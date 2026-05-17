@@ -3,6 +3,9 @@
 <section class="card">
     <h2 class="mb-2">Select Role</h2>
     <p>Choose how you want to use the system for this session.</p>
+    {% if is_employer_account %}
+        <p class="text-muted">Employer accounts can open the employer dashboard and the employee sales view after signing in as employer.</p>
+    {% endif %}
     <form method="post">
         {% csrf_token %}
         {{ form.non_field_errors }}

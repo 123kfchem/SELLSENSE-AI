@@ -2,6 +2,7 @@ from django.urls import path
 from .views import (
     BusinessLoginView,
     business_logout,
+    daily_sales_pdf,
     employee_dashboard,
     employer_dashboard,
     home,
@@ -20,6 +21,7 @@ urlpatterns = [
     path("logout/", business_logout, name="logout"),
     path("role-select/", role_select, name="role-select"),
     path("employer/", employer_dashboard, name="employer-dashboard"),
+    path("employer/daily-sales/pdf/", daily_sales_pdf, name="daily-sales-pdf"),
     path("employee/", employee_dashboard, name="employee-dashboard"),
     path("reports/<str:period>/", reports_view, name="reports"),
     path("api/analytics/sales/", sales_analytics_api, name="sales-analytics-api"),

@@ -1,7 +1,12 @@
 {% extends "base.html" %}
 {% block content %}
 <section class="card">
-    <h2>Employer Dashboard</h2>
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+        <h2 class="mb-0">Employer Dashboard</h2>
+        {% if can_switch_to_employee %}
+            <a class="btn btn-outline-primary btn-sm" href="{% url 'employee-dashboard' %}">Employee sales view</a>
+        {% endif %}
+    </div>
     <div class="tabs" data-tabs>
         <button type="button" class="tab-btn active" data-tab-target="tab-items">Items</button>
         <button type="button" class="tab-btn" data-tab-target="tab-ai">AI Suggestions</button>
@@ -96,7 +101,10 @@
         </section>
 
         <section class="card">
-            <h3>Today's Sales Log</h3>
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+                <h3 class="mb-0">Today's Sales Log</h3>
+                <a class="btn btn-outline-primary btn-sm" href="{% url 'daily-sales-pdf' %}">Generate PDF for Today's Sales</a>
+            </div>
             <div class="table-responsive">
             <table class="table table-striped table-hover align-middle">
                 <thead>
@@ -189,10 +197,14 @@
         <section class="card">
             <h3>Quick Reports</h3>
             <p>Daily Units: {{ daily_units }} | Daily Revenue: {{ daily_revenue }}</p>
+            <div class="d-flex gap-2 flex-wrap mb-2">
+                <a class="btn btn-outline-primary btn-sm" href="{% url 'daily-sales-pdf' %}">Generate PDF for Today's Sales</a>
+            </div>
             <div class="d-flex gap-2 flex-wrap">
                 <a class="btn btn-outline-primary btn-sm" href="{% url 'reports' 'daily' %}">Daily</a>
                 <a class="btn btn-outline-primary btn-sm" href="{% url 'reports' 'weekly' %}">Weekly</a>
                 <a class="btn btn-outline-primary btn-sm" href="{% url 'reports' 'monthly' %}">Monthly</a>
+                <a class="btn btn-outline-primary btn-sm" href="{% url 'reports' 'yearly' %}">Yearly</a>
             </div>
         </section>
     </div>

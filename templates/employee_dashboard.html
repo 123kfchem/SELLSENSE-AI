@@ -2,7 +2,12 @@
 {% block content %}
 <section class="grid two-col">
     <div class="card">
-        <h2>Employee Dashboard</h2>
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+            <h2 class="mb-0">Employee Dashboard</h2>
+            {% if can_switch_to_employer %}
+                <a class="btn btn-outline-primary btn-sm" href="{% url 'employer-dashboard' %}">Employer dashboard</a>
+            {% endif %}
+        </div>
         <p>Select items for customers and process payment.</p>
         <form method="post" id="sale-form">
             {% csrf_token %}

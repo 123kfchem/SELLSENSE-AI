@@ -85,6 +85,45 @@ form p {
     margin-bottom: 10px;
 }
 
+.password-field {
+    position: relative;
+    display: block;
+}
+
+.password-field input {
+    width: 100%;
+    padding-right: 4.5rem;
+}
+
+.password-toggle-btn {
+    position: absolute;
+    top: 50%;
+    right: 6px;
+    transform: translateY(-50%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    min-width: 2.25rem;
+    padding: 0;
+    background: transparent;
+    color: #64748b;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.password-toggle-btn svg {
+    display: block;
+}
+
+.password-toggle-btn:hover,
+.password-toggle-btn:focus {
+    background: #f1f5f9;
+    color: #2563eb;
+}
+
 input, select, textarea, button {
     width: 100%;
     padding: 10px;
