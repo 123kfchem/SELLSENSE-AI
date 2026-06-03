@@ -10,6 +10,40 @@
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
+    <style>
+        body {
+          margin: 0;
+          min-height: 100vh;
+        
+          /* Your extracted color palette */
+          background: linear-gradient(
+            -45deg,
+            #0A1428,  /* deep navy */
+            #0A1E32,  /* dark tech blue */
+            #0A6EFA,  /* neon blue accent */
+            #E6F0F0,  /* soft cyan tint */
+            #FAFAFA   /* white highlight */
+          );
+        
+          background-size: 400% 400%;
+          animation: gradientShift 12s ease infinite;
+        
+          overflow-x: hidden;
+        }
+        
+        /* Smooth animated movement */
+        @keyframes gradientShift {
+          0% {
+            background-position: 0% 50%;
+          }
+          50% {
+            background-position: 100% 50%;
+          }
+          100% {
+            background-position: 0% 50%;
+          }
+        }
+        </style>
     <header class="topbar navbar navbar-expand-lg">
         <a class="brand h4 mb-0 text-decoration-none text-light" href="{% url 'home' %}">
             <img src="/static/img/logo.png" alt="SellSense AI logo" class="brand-logo">
@@ -43,10 +77,7 @@
         {% block content %}{% endblock %}
     </main>
 
-    <footer class="text-center text-muted py-3 border-top bg-white">
-        Sellsense AI v 26.1
-    </footer>
-
+    
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
     <script src="/static/js/app.js"></script>
 </body>

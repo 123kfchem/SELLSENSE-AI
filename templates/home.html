@@ -10,7 +10,7 @@
     <div class="d-flex flex-wrap gap-2">
         <a class="btn btn-primary btn-lg" href="{% url 'login' %}">Log in for Detailed Insights</a>
         {% if user.is_authenticated %}
-            <a class="btn btn-outline-primary btn-lg" href="{% url 'role-select' %}">Go to Your Dashboard</a>
+            <a class="btn btn-outline-primary btn-lg" href="{% url 'login' %}">Go to Your Dashboard</a>
         {% endif %}
     </div>
 </section>
@@ -50,4 +50,13 @@
     <p class="mb-2">Questions or partnership requests? We would love to hear from you.</p>
     <p class="mb-0"><strong>Email:</strong> ericmonyancha789@gmail.com | <strong>Phone:</strong> +254 719523921</p>
 </section>
+<style>
+    #contact{
+        align-items: center;
+        border-bottom: lightblue;
+        box-shadow: inset;
+
+    }
+
+</style>
 {% endblock %}
