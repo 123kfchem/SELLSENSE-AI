@@ -12,6 +12,12 @@ function toggleMpesaField() {
 const PASSWORD_EYE_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
 const PASSWORD_EYE_OFF_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 0-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`;
 
+const BRAND_COLORS = ["#2563EB", "#4F46E5", "#10B981", "#8B5CF6", "#F59E0B", "#EF4444"];
+
+function brandChartColors(count) {
+    return Array.from({ length: count }, (_, index) => BRAND_COLORS[index % BRAND_COLORS.length]);
+}
+
 function setPasswordToggleIcon(button, isVisible) {
     button.innerHTML = isVisible ? PASSWORD_EYE_OFF_ICON : PASSWORD_EYE_ICON;
 }
@@ -71,6 +77,8 @@ document.addEventListener("DOMContentLoaded", () => {
         roleField.addEventListener("change", toggleEmployerPasswordField);
     }
 
+    const tabShowCallbacks = {};
+
     document.querySelectorAll("[data-tabs]").forEach((tabsContainer) => {
         const buttons = tabsContainer.querySelectorAll(".tab-btn");
         buttons.forEach((button) => {
@@ -84,6 +92,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 button.classList.add("active");
                 targetPanel.classList.add("active");
+
+                const onShow = tabShowCallbacks[targetId];
+                if (onShow) {
+                    requestAnimationFrame(onShow);
+                }
             });
         });
     });
@@ -93,12 +106,21 @@ document.addEventListener("DOMContentLoaded", () => {
     const qtyField = document.getElementById("id_quantity");
     const totalPreview = document.getElementById("sale-total-preview");
     const itemPriceData = document.getElementById("item-price-data");
+    const itemStockData = document.getElementById("item-stock-data");
     if (saleForm && itemField && qtyField && totalPreview && itemPriceData) {
         let prices = {};
+        let stock = {};
         try {
             prices = JSON.parse(itemPriceData.textContent || "{}");
         } catch (error) {
             prices = {};
+        }
+        if (itemStockData) {
+            try {
+                stock = JSON.parse(itemStockData.textContent || "{}");
+            } catch (error) {
+                stock = {};
+            }
         }
 
         const updateSalePreview = () => {
@@ -107,6 +129,17 @@ document.addEventListener("DOMContentLoaded", () => {
             const unitPrice = Number.parseFloat(prices[itemId] || "0");
             const total = unitPrice * (Number.isFinite(qty) ? qty : 0);
             totalPreview.textContent = Number.isFinite(total) ? total.toFixed(2) : "0.00";
+            const stockInfo = stock[itemId];
+            if (stockInfo) {
+                qtyField.max = stockInfo.remaining;
+                qtyField.setAttribute(
+                    "title",
+                    `${stockInfo.remaining} of ${stockInfo.initial} units remaining`
+                );
+            } else {
+                qtyField.removeAttribute("max");
+                qtyField.removeAttribute("title");
+            }
         };
 
         updateSalePreview();
@@ -120,7 +153,36 @@ document.addEventListener("DOMContentLoaded", () => {
     if (pieCanvas && barCanvas && window.Chart) {
         let pieChart = null;
         let barChart = null;
+        let latestChartItems = [];
+        const pieChartOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: window.matchMedia("(max-width: 575px)").matches ? "bottom" : "right",
+                    labels: {
+                        boxWidth: 12,
+                        padding: 10,
+                    },
+                },
+            },
+        };
+        const refreshDashboardCharts = () => {
+            if (pieChart) {
+                pieChart.resize();
+            }
+            if (barChart) {
+                barChart.resize();
+            }
+        };
+        const syncPieLegendPosition = () => {
+            if (!pieChart) return;
+            const isMobile = window.matchMedia("(max-width: 575px)").matches;
+            pieChart.options.plugins.legend.position = isMobile ? "bottom" : "right";
+            pieChart.update();
+        };
         const renderCharts = (items) => {
+            latestChartItems = items;
             const labels = items.map((item) => item.name);
             const soldData = items.map((item) => Number.parseInt(item.total_sold || 0, 10));
             if (pieChart) {
@@ -133,14 +195,15 @@ document.addEventListener("DOMContentLoaded", () => {
                 type: "pie",
                 data: {
                     labels,
-                    datasets: [{ data: soldData }],
+                    datasets: [{ data: soldData, backgroundColor: brandChartColors(soldData.length) }],
                 },
+                options: pieChartOptions,
             });
             barChart = new window.Chart(barCanvas, {
                 type: "bar",
                 data: {
                     labels,
-                    datasets: [{ label: "Items Sold", data: soldData, backgroundColor: "#4e73df" }],
+                    datasets: [{ label: "Items Sold", data: soldData, backgroundColor: "#2563EB" }],
                 },
                 options: {
                     scales: {
@@ -148,6 +211,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     },
                 },
             });
+            refreshDashboardCharts();
         };
         const loadCharts = async () => {
             try {
@@ -175,6 +239,26 @@ document.addEventListener("DOMContentLoaded", () => {
                 // Ignore silent refresh errors for dashboard charts.
             }
         };
+        tabShowCallbacks["tab-analytics"] = () => {
+            if (latestChartItems.length) {
+                renderCharts(latestChartItems);
+                return;
+            }
+            loadCharts();
+        };
+        const pieWrap = pieCanvas.closest(".chart-wrap--pie");
+        if (pieWrap && window.ResizeObserver) {
+            const resizeObserver = new ResizeObserver(() => {
+                refreshDashboardCharts();
+                syncPieLegendPosition();
+            });
+            resizeObserver.observe(pieWrap);
+        } else {
+            window.addEventListener("resize", () => {
+                refreshDashboardCharts();
+                syncPieLegendPosition();
+            });
+        }
         loadCharts();
         window.setInterval(loadCharts, 30000);
     }
@@ -199,7 +283,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 type: "bar",
                 data: {
                     labels: roleLabels,
-                    datasets: [{ label: "Registered Businesses", data: roleTotals, backgroundColor: "#36b9cc" }],
+                    datasets: [{ label: "Registered Businesses", data: roleTotals, backgroundColor: "#4F46E5" }],
                 },
                 options: { scales: { y: { beginAtZero: true } } },
             });
@@ -207,7 +291,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 type: "pie",
                 data: {
                     labels: statusLabels,
-                    datasets: [{ data: statusTotals }],
+                    datasets: [{ data: statusTotals, backgroundColor: brandChartColors(statusTotals.length) }],
                 },
             });
         };
@@ -226,4 +310,23 @@ document.addEventListener("DOMContentLoaded", () => {
         loadSuperuserStats();
         window.setInterval(loadSuperuserStats, 30000);
     }
+
+    document.querySelectorAll(".contact-reveal").forEach((el) => {
+        if (!("IntersectionObserver" in window)) {
+            el.classList.add("is-visible");
+            return;
+        }
+        const observer = new IntersectionObserver(
+            (entries) => {
+                entries.forEach((entry) => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add("is-visible");
+                        observer.unobserve(entry.target);
+                    }
+                });
+            },
+            { threshold: 0.15, rootMargin: "0px 0px -40px 0px" }
+        );
+        observer.observe(el);
+    });
 });

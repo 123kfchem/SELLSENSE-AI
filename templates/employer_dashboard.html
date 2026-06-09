@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-<section class="card">
+<section class="card dashboard-header">
     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
         <h2 class="mb-0">Employer Dashboard</h2>
         {% if can_switch_to_employee %}
@@ -42,7 +42,7 @@
             <div class="table-responsive">
             <table class="table table-striped table-hover align-middle">
                 <thead>
-                    <tr><th>Name</th><th>Category</th><th>Price</th><th>Initial Qty</th><th>Current Qty</th><th>Status</th><th>Actions</th></tr>
+                    <tr><th>Name</th><th>Category</th><th>Price</th><th>Initial Qty</th><th>Remaining Qty</th><th>Status</th><th>Actions</th></tr>
                 </thead>
                 <tbody>
                     {% for item in items %}
@@ -212,7 +212,9 @@
     <div id="tab-analytics" class="tab-panel">
         <section class="card">
             <h3>Sales Distribution (Pie)</h3>
-            <canvas id="sales-pie-chart" height="40"></canvas>
+            <div class="chart-wrap chart-wrap--pie">
+                <canvas id="sales-pie-chart"></canvas>
+            </div>
         </section>
         <section class="card">
             <h3>Items Sold (Bar)</h3>

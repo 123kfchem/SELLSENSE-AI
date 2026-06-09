@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-<section class="card">
+<section class="card dashboard-header">
     <h2 class="mb-3">Superuser Business Management</h2>
     <p class="mb-3">Create business accounts, review registered businesses, and monitor registration stats.</p>
     <form method="post">
@@ -15,13 +15,13 @@
     <h3 class="mb-3">Registered Business Overview</h3>
     <div class="row g-3 mb-3">
         <div class="col-md-6">
-            <div class="p-3 border rounded bg-light">
+            <div class="chart-panel">
                 <h5 class="mb-2">Businesses by Role</h5>
                 <canvas id="superuser-business-chart" height="200"></canvas>
             </div>
         </div>
         <div class="col-md-6">
-            <div class="p-3 border rounded bg-light">
+            <div class="chart-panel">
                 <h5 class="mb-2">Business Status</h5>
                 <canvas id="superuser-status-chart" height="200"></canvas>
             </div>
@@ -55,7 +55,7 @@
                             <span class="badge text-bg-secondary">Inactive</span>
                         {% endif %}
                     </td>
-                    <td>
+                    <td class="superuser-actions">
                         <form method="post" class="inline">
                             {% csrf_token %}
                             <input type="hidden" name="action" value="toggle">
@@ -64,6 +64,47 @@
                                 {% if profile.is_business_active %}Deactivate{% else %}Activate{% endif %}
                             </button>
                         </form>
+                        <details class="password-reset-panel">
+                            <summary class="btn btn-outline-primary btn-sm">Reset Passwords</summary>
+                            <form method="post" class="password-reset-form">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="reset_password">
+                                <input type="hidden" name="profile_id" value="{{ profile.id }}">
+                                <label class="form-label">New login password</label>
+                                <input
+                                    type="password"
+                                    name="login_password"
+                                    class="form-control form-control-sm"
+                                    placeholder="New login password"
+                                    autocomplete="new-password"
+                                >
+                                <input
+                                    type="password"
+                                    name="login_password_confirm"
+                                    class="form-control form-control-sm"
+                                    placeholder="Confirm login password"
+                                    autocomplete="new-password"
+                                >
+                                {% if profile.role == "employer" %}
+                                <label class="form-label mt-2">New employer password</label>
+                                <input
+                                    type="password"
+                                    name="employer_password"
+                                    class="form-control form-control-sm"
+                                    placeholder="New employer password"
+                                    autocomplete="new-password"
+                                >
+                                <input
+                                    type="password"
+                                    name="employer_password_confirm"
+                                    class="form-control form-control-sm"
+                                    placeholder="Confirm employer password"
+                                    autocomplete="new-password"
+                                >
+                                {% endif %}
+                                <button type="submit" class="btn btn-primary btn-sm mt-2">Save Passwords</button>
+                            </form>
+                        </details>
                     </td>
                 </tr>
                 {% empty %}

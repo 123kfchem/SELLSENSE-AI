@@ -1,84 +1,159 @@
 <!DOCTYPE html>
+
 <html lang="en">
+
 <head>
+
     <meta charset="UTF-8">
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>SellSense AI</title>
+
     <link rel="icon" type="image/png" href="/static/img/logo.png">
+
     <link rel="apple-touch-icon" href="/static/img/logo.png">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
     <link rel="stylesheet" href="/static/css/style.css">
+
 </head>
+
 <body>
-    <style>
-        body {
-          margin: 0;
-          min-height: 100vh;
-        
-          /* Your extracted color palette */
-          background: linear-gradient(
-            -45deg,
-            #0A1428,  /* deep navy */
-            #0A1E32,  /* dark tech blue */
-            #0A6EFA,  /* neon blue accent */
-            #E6F0F0,  /* soft cyan tint */
-            #FAFAFA   /* white highlight */
-          );
-        
-          background-size: 400% 400%;
-          animation: gradientShift 12s ease infinite;
-        
-          overflow-x: hidden;
-        }
-        
-        /* Smooth animated movement */
-        @keyframes gradientShift {
-          0% {
-            background-position: 0% 50%;
-          }
-          50% {
-            background-position: 100% 50%;
-          }
-          100% {
-            background-position: 0% 50%;
-          }
-        }
-        </style>
-    <header class="topbar navbar navbar-expand-lg">
-        <a class="brand h4 mb-0 text-decoration-none text-light" href="{% url 'home' %}">
-            <img src="/static/img/logo.png" alt="SellSense AI logo" class="brand-logo">
-            <span>SellSense AI</span>
-        </a>
-        <nav class="nav-links d-flex align-items-center gap-2 gap-lg-3">
-            <a href="{% url 'home' %}">Home</a>
-            <a href="{% url 'home' %}#about">About</a>
-            <a href="{% url 'home' %}#services">Services</a>
-            <a href="{% url 'home' %}#contact">Contact Us</a>
-            {% if user.is_authenticated %}
-                {% if user.is_superuser %}
-                    <a href="{% url 'superuser-dashboard' %}">Superuser Dashboard</a>
-                {% else %}
-                    <a href="{% url 'role-select' %}">Dashboard</a>
-                {% endif %}
-                <a class="btn btn-light btn-sm px-3" href="{% url 'logout' %}">Logout</a>
-            {% else %}
-                <a class="btn btn-light btn-sm px-3" href="{% url 'login' %}">Login</a>
-            {% endif %}
-        </nav>
+
+    <header class="topbar navbar navbar-expand-lg navbar-dark">
+
+        <div class="container-fluid topbar-inner">
+
+            <a class="navbar-brand brand h4 mb-0 text-decoration-none text-light" href="{% url 'home' %}">
+
+                <img src="/static/img/logo.png" alt="SellSense AI logo" class="brand-logo">
+
+                <span>SellSense AI</span>
+
+            </a>
+
+            <button
+
+                class="navbar-toggler"
+
+                type="button"
+
+                data-bs-toggle="collapse"
+
+                data-bs-target="#mainNav"
+
+                aria-controls="mainNav"
+
+                aria-expanded="false"
+
+                aria-label="Toggle navigation"
+
+            >
+
+                <span class="navbar-toggler-icon"></span>
+
+            </button>
+
+            <div class="collapse navbar-collapse" id="mainNav">
+
+                <nav class="nav-links navbar-nav ms-auto align-items-lg-center gap-lg-3">
+
+                    <a class="nav-link px-lg-2" href="{% url 'home' %}">Home</a>
+
+                    <a class="nav-link px-lg-2" href="{% url 'home' %}#about">About</a>
+
+                    <a class="nav-link px-lg-2" href="{% url 'home' %}#services">Services</a>
+
+                    <a class="nav-link px-lg-2" href="{% url 'home' %}#contact">Contact Us</a>
+
+                    {% if user.is_authenticated %}
+
+                        {% if user.is_superuser %}
+
+                            <a class="nav-link px-lg-2" href="{% url 'superuser-dashboard' %}">Superuser Dashboard</a>
+
+                        {% else %}
+
+                            <a class="nav-link px-lg-2" href="{% url 'role-select' %}">Dashboard</a>
+
+                        {% endif %}
+
+                        <a class="btn btn-sm px-3 nav-auth-btn" href="{% url 'logout' %}">Logout</a>
+
+                    {% else %}
+
+                        <a class="btn btn-sm px-3 nav-auth-btn" href="{% url 'login' %}">Login</a>
+
+                    {% endif %}
+
+                </nav>
+
+            </div>
+
+        </div>
+
     </header>
-   
+
+
 
     <main class="container py-3">
+
         {% if messages %}
+
             {% for message in messages %}
-                <div class="alert alert-success shadow-sm">{{ message }}</div>
+
+                <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags|default:'success' }}{% endif %} shadow-sm mb-3" role="alert">{{ message }}</div>
+
             {% endfor %}
+
         {% endif %}
+
         {% block content %}{% endblock %}
+
     </main>
 
-    
+
+
+    <footer class="site-footer">
+
+        <div class="container text-center">
+
+            <p class="site-footer__brand mb-1">SellSense AI</p>
+
+            <p class="site-footer__muted mb-2">Business &amp; sales management for modern organizations.</p>
+
+            <p class="site-footer__muted mb-0">
+
+                <a href="{% url 'home' %}#contact">Contact</a>
+
+                &middot;
+
+                <a href="{% url 'login' %}">Login</a>
+
+            </p>
+
+        </div>
+
+    </footer>
+
+
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+
     <script src="/static/js/app.js"></script>
+
 </body>
+
 </html>
+
+

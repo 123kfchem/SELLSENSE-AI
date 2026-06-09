@@ -1,0 +1,253 @@
+<section id="contact" class="contact-section" aria-labelledby="contact-heading">
+    <div class="contact-section__header text-center">
+        <span class="contact-section__badge">Contact</span>
+        <h2 id="contact-heading" class="contact-section__title">Get in Touch</h2>
+        <p class="contact-section__lead">
+            Have questions about SellSense AI? Reach out to our team for support, partnership opportunities,
+            or product inquiries. We're here to help your business grow.
+        </p>
+    </div>
+
+    <div class="row g-4 align-items-stretch contact-section__main">
+        <div class="col-lg-7">
+            <div class="contact-form-card card h-100">
+                <div class="card-body p-4 p-md-5">
+                    <h3 class="h5 fw-semibold mb-1">Send us a message</h3>
+                    <p class="text-muted small mb-4">Fill out the form below and we'll get back to you within 24 hours.</p>
+
+                    <form method="post" action="{% url 'home' %}#contact" class="contact-form" novalidate>
+                        {% csrf_token %}
+                        <input type="hidden" name="form_type" value="contact">
+
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="{{ contact_form.full_name.id_for_label }}" class="form-label">{{ contact_form.full_name.label }}</label>
+                                {{ contact_form.full_name }}
+                                {% if contact_form.full_name.errors %}
+                                    <div class="invalid-feedback d-block">{{ contact_form.full_name.errors|join:", " }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ contact_form.email.id_for_label }}" class="form-label">{{ contact_form.email.label }}</label>
+                                {{ contact_form.email }}
+                                {% if contact_form.email.errors %}
+                                    <div class="invalid-feedback d-block">{{ contact_form.email.errors|join:", " }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-12">
+                                <label for="{{ contact_form.company_name.id_for_label }}" class="form-label">
+                                    {{ contact_form.company_name.label }}
+                                    <span class="text-muted fw-normal">(optional)</span>
+                                </label>
+                                {{ contact_form.company_name }}
+                            </div>
+                            <div class="col-12">
+                                <label for="{{ contact_form.subject.id_for_label }}" class="form-label">{{ contact_form.subject.label }}</label>
+                                {{ contact_form.subject }}
+                                {% if contact_form.subject.errors %}
+                                    <div class="invalid-feedback d-block">{{ contact_form.subject.errors|join:", " }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-12">
+                                <label for="{{ contact_form.message.id_for_label }}" class="form-label">{{ contact_form.message.label }}</label>
+                                {{ contact_form.message }}
+                                {% if contact_form.message.errors %}
+                                    <div class="invalid-feedback d-block">{{ contact_form.message.errors|join:", " }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-primary contact-form__submit w-100 w-md-auto">
+                                    <i class="bi bi-send-fill me-2" aria-hidden="true"></i>
+                                    Send Message
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="contact-info-stack h-100 d-flex flex-column gap-3">
+                <div class="contact-info-card">
+                    <div class="contact-info-card__icon" aria-hidden="true">
+                        <i class="bi bi-envelope-fill"></i>
+                    </div>
+                    <div>
+                        <h4 class="contact-info-card__title">Email Support</h4>
+                        <a href="mailto:ericmonyancha789@gmail.com" class="contact-info-card__link">ericmonyancha789@gmail.com</a>
+                    </div>
+                </div>
+
+                <div class="contact-info-card">
+                    <div class="contact-info-card__icon" aria-hidden="true">
+                        <i class="bi bi-telephone-fill"></i>
+                    </div>
+                    <div>
+                        <h4 class="contact-info-card__title">Phone Number</h4>
+                        <a href="tel:+254719523921" class="contact-info-card__link">+254 719 523 921</a>
+                    </div>
+                </div>
+
+                <div class="contact-info-card">
+                    <div class="contact-info-card__icon" aria-hidden="true">
+                        <i class="bi bi-geo-alt-fill"></i>
+                    </div>
+                    <div>
+                        <h4 class="contact-info-card__title">Office Location</h4>
+                        <p class="contact-info-card__text mb-0">Westlands Business Park, Nairobi, Kenya</p>
+                    </div>
+                </div>
+
+                <div class="contact-info-card">
+                    <div class="contact-info-card__icon" aria-hidden="true">
+                        <i class="bi bi-clock-fill"></i>
+                    </div>
+                    <div>
+                        <h4 class="contact-info-card__title">Business Hours</h4>
+                        <p class="contact-info-card__text mb-0">Mon – Fri: 8:00 AM – 6:00 PM EAT</p>
+                        <p class="contact-info-card__text mb-0 text-muted small">Sat: 9:00 AM – 1:00 PM</p>
+                    </div>
+                </div>
+
+                <div class="contact-social-card card flex-grow-1">
+                    <div class="card-body p-4 d-flex flex-column justify-content-center">
+                        <h4 class="h6 fw-semibold mb-3">Connect with us</h4>
+                        <div class="contact-social-links" role="list">
+                            <a href="https://www.linkedin.com" class="contact-social-link" target="_blank" rel="noopener noreferrer" aria-label="SellSense on LinkedIn" role="listitem">
+                                <i class="bi bi-linkedin" aria-hidden="true"></i>
+                            </a>
+                            <a href="https://www.facebook.com" class="contact-social-link" target="_blank" rel="noopener noreferrer" aria-label="SellSense on Facebook" role="listitem">
+                                <i class="bi bi-facebook" aria-hidden="true"></i>
+                            </a>
+                            <a href="https://x.com" class="contact-social-link" target="_blank" rel="noopener noreferrer" aria-label="SellSense on X" role="listitem">
+                                <i class="bi bi-twitter-x" aria-hidden="true"></i>
+                            </a>
+                            <a href="https://wa.me/254719523921" class="contact-social-link" target="_blank" rel="noopener noreferrer" aria-label="SellSense on WhatsApp" role="listitem">
+                                <i class="bi bi-whatsapp" aria-hidden="true"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="contact-map-wrap contact-reveal">
+        <div class="contact-map-card card overflow-hidden">
+            <div class="card-body p-0">
+                <div class="contact-map-header px-4 py-3">
+                    <h3 class="h6 fw-semibold mb-0">
+                        <i class="bi bi-pin-map-fill me-2 text-primary" aria-hidden="true"></i>
+                        Find us on the map
+                    </h3>
+                </div>
+                <div class="ratio ratio-21x9 contact-map-ratio">
+                    <iframe
+                        src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3988.8174!2d36.8073!3d-1.2674!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x182f1172d84d49a7%3A0x6f3b3b3b3b3b3b3b!2sWestlands%2C%20Nairobi%2C%20Kenya!5e0!3m2!1sen!2ske!4v1700000000000!5m2!1sen!2ske"
+                        title="SellSense AI office location on Google Maps"
+                        loading="lazy"
+                        referrerpolicy="no-referrer-when-downgrade"
+                        allowfullscreen
+                    ></iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="contact-faq contact-reveal">
+        <div class="text-center mb-4">
+            <span class="contact-section__badge">FAQ</span>
+            <h3 class="contact-section__title contact-section__title--sm">Frequently Asked Questions</h3>
+            <p class="contact-section__lead contact-section__lead--sm mb-0">
+                Quick answers to common questions about SellSense AI.
+            </p>
+        </div>
+
+        <div class="accordion contact-accordion" id="contactFaq">
+            <div class="accordion-item">
+                <h4 class="accordion-header" id="faq-heading-1">
+                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#faq-collapse-1" aria-expanded="true" aria-controls="faq-collapse-1">
+                        What is SellSense AI?
+                    </button>
+                </h4>
+                <div id="faq-collapse-1" class="accordion-collapse collapse show" aria-labelledby="faq-heading-1" data-bs-parent="#contactFaq">
+                    <div class="accordion-body">
+                        SellSense AI is a business and sales management platform that helps organizations track sales,
+                        manage inventory, monitor customers, and analyze performance with real-time dashboards and insights.
+                    </div>
+                </div>
+            </div>
+
+            <div class="accordion-item">
+                <h4 class="accordion-header" id="faq-heading-2">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq-collapse-2" aria-expanded="false" aria-controls="faq-collapse-2">
+                        How do I get started with SellSense AI?
+                    </button>
+                </h4>
+                <div id="faq-collapse-2" class="accordion-collapse collapse" aria-labelledby="faq-heading-2" data-bs-parent="#contactFaq">
+                    <div class="accordion-body">
+                        Create an account through our registration page, set up your business profile, and invite your team.
+                        Our onboarding guides you through adding inventory and recording your first sales.
+                    </div>
+                </div>
+            </div>
+
+            <div class="accordion-item">
+                <h4 class="accordion-header" id="faq-heading-3">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq-collapse-3" aria-expanded="false" aria-controls="faq-collapse-3">
+                        Is my business data secure?
+                    </button>
+                </h4>
+                <div id="faq-collapse-3" class="accordion-collapse collapse" aria-labelledby="faq-heading-3" data-bs-parent="#contactFaq">
+                    <div class="accordion-body">
+                        Yes. SellSense AI uses multi-tenant architecture with strict data isolation, secure authentication,
+                        and role-based access controls so each business only sees its own information.
+                    </div>
+                </div>
+            </div>
+
+            <div class="accordion-item">
+                <h4 class="accordion-header" id="faq-heading-4">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq-collapse-4" aria-expanded="false" aria-controls="faq-collapse-4">
+                        Can I manage multiple employees on one account?
+                    </button>
+                </h4>
+                <div id="faq-collapse-4" class="accordion-collapse collapse" aria-labelledby="faq-heading-4" data-bs-parent="#contactFaq">
+                    <div class="accordion-body">
+                        Absolutely. Employers can add employees with role-specific dashboards. Employees process sales
+                        while employers manage inventory, reports, and business settings.
+                    </div>
+                </div>
+            </div>
+
+            <div class="accordion-item">
+                <h4 class="accordion-header" id="faq-heading-5">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq-collapse-5" aria-expanded="false" aria-controls="faq-collapse-5">
+                        What kind of reports and analytics are available?
+                    </button>
+                </h4>
+                <div id="faq-collapse-5" class="accordion-collapse collapse" aria-labelledby="faq-heading-5" data-bs-parent="#contactFaq">
+                    <div class="accordion-body">
+                        SellSense AI provides daily, weekly, monthly, and yearly revenue reports, sales summaries,
+                        inventory tracking, PDF exports, and AI-powered suggestions to improve your sales strategy.
+                    </div>
+                </div>
+            </div>
+
+            <div class="accordion-item">
+                <h4 class="accordion-header" id="faq-heading-6">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq-collapse-6" aria-expanded="false" aria-controls="faq-collapse-6">
+                        How can I reach support?
+                    </button>
+                </h4>
+                <div id="faq-collapse-6" class="accordion-collapse collapse" aria-labelledby="faq-heading-6" data-bs-parent="#contactFaq">
+                    <div class="accordion-body">
+                        You can email us at ericmonyancha789@gmail.com, call +254 719 523 921, or use the contact form above.
+                        Our support team typically responds within one business day.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>

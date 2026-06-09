@@ -1,6 +1,7 @@
 from django import forms
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.contrib.auth.models import User
+from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 
 from .models import Business, Item, ItemReport, Sale, UserProfile
@@ -63,9 +64,13 @@ class SaleForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.business = business
         if business is not None:
-            self.fields["item"].queryset = Item.objects.for_business(business).filter(
+            queryset = Item.objects.for_business(business).filter(
                 status=Item.STATUS_ACTIVE,
                 current_quantity__gt=0,
+            )
+            self.fields["item"].queryset = queryset
+            self.fields["item"].label_from_instance = (
+                lambda obj: f"{obj.name} ({obj.current_quantity} remaining of {obj.initial_quantity})"
             )
 
     def clean_item(self):
@@ -73,6 +78,18 @@ class SaleForm(forms.ModelForm):
         if self.business is not None and item.business_id != self.business.id:
             raise forms.ValidationError("Invalid item for your business.")
         return item
+
+    def clean(self):
+        cleaned_data = super().clean()
+        item = cleaned_data.get("item")
+        quantity = cleaned_data.get("quantity")
+        if item and quantity:
+            item.refresh_from_db(fields=["current_quantity", "initial_quantity", "name"])
+            if quantity > item.current_quantity:
+                raise ValidationError(
+                    f"Only {item.current_quantity} unit(s) of {item.name} remain in stock."
+                )
+        return cleaned_data
 
 
 class BusinessRegistrationForm(UserCreationForm):
@@ -114,6 +131,70 @@ class BusinessRegistrationForm(UserCreationForm):
         return cleaned_data
 
 
+class SuperuserPasswordResetForm(forms.Form):
+    login_password = forms.CharField(
+        required=False,
+        widget=forms.PasswordInput(attrs={"autocomplete": "new-password"}),
+        help_text="Resets the business account login password.",
+    )
+    login_password_confirm = forms.CharField(
+        required=False,
+        widget=forms.PasswordInput(attrs={"autocomplete": "new-password"}),
+    )
+    employer_password = forms.CharField(
+        required=False,
+        widget=forms.PasswordInput(attrs={"autocomplete": "new-password"}),
+        help_text="Resets the employer role password used at login.",
+    )
+    employer_password_confirm = forms.CharField(
+        required=False,
+        widget=forms.PasswordInput(attrs={"autocomplete": "new-password"}),
+    )
+
+    def __init__(self, *args, profile=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.profile = profile
+        if profile and profile.role != UserProfile.ROLE_EMPLOYER:
+            del self.fields["employer_password"]
+            del self.fields["employer_password_confirm"]
+
+    def clean(self):
+        cleaned_data = super().clean()
+        login_password = cleaned_data.get("login_password", "")
+        login_password_confirm = cleaned_data.get("login_password_confirm", "")
+        employer_password = cleaned_data.get("employer_password", "")
+        employer_password_confirm = cleaned_data.get("employer_password_confirm", "")
+
+        if login_password or login_password_confirm:
+            if login_password != login_password_confirm:
+                raise ValidationError("Login passwords do not match.")
+            validate_password(login_password, self.profile.user)
+
+        if employer_password or employer_password_confirm:
+            if self.profile.role != UserProfile.ROLE_EMPLOYER:
+                raise ValidationError("Employer password can only be reset for employer accounts.")
+            if employer_password != employer_password_confirm:
+                raise ValidationError("Employer passwords do not match.")
+            if len(employer_password) < 8:
+                raise ValidationError("Employer password must be at least 8 characters.")
+
+        if not login_password and not employer_password:
+            raise ValidationError("Enter a new login password and/or employer password to reset.")
+
+        return cleaned_data
+
+    def save(self):
+        profile = self.profile
+        user = profile.user
+        if self.cleaned_data.get("login_password"):
+            user.set_password(self.cleaned_data["login_password"])
+            user.save(update_fields=["password"])
+        if self.cleaned_data.get("employer_password"):
+            profile.set_employer_password(self.cleaned_data["employer_password"])
+            profile.save(update_fields=["employer_password_hash"])
+        return profile
+
+
 class BusinessProfileUpdateForm(forms.Form):
     role = forms.ChoiceField(choices=UserProfile.ROLE_CHOICES)
     business_name = forms.CharField(max_length=180)
@@ -144,3 +225,38 @@ class BusinessProfileUpdateForm(forms.Form):
         profile.is_business_active = self.cleaned_data.get("is_business_active", False)
         profile.save(update_fields=["role", "is_business_active"])
         return profile
+
+
+class ContactForm(forms.Form):
+    full_name = forms.CharField(
+        max_length=120,
+        label="Full Name",
+        widget=forms.TextInput(attrs={"class": "form-control", "placeholder": "John Doe", "autocomplete": "name"}),
+    )
+    email = forms.EmailField(
+        label="Email Address",
+        widget=forms.EmailInput(attrs={"class": "form-control", "placeholder": "you@company.com", "autocomplete": "email"}),
+    )
+    company_name = forms.CharField(
+        max_length=120,
+        required=False,
+        label="Company Name",
+        widget=forms.TextInput(attrs={"class": "form-control", "placeholder": "Your company (optional)", "autocomplete": "organization"}),
+    )
+    subject = forms.CharField(
+        max_length=200,
+        label="Subject",
+        widget=forms.TextInput(attrs={"class": "form-control", "placeholder": "How can we help?"}),
+    )
+    message = forms.CharField(
+        label="Message",
+        widget=forms.Textarea(attrs={"class": "form-control", "rows": 5, "placeholder": "Tell us more about your inquiry..."}),
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.is_bound:
+            for name, field in self.fields.items():
+                if self.errors.get(name):
+                    css = field.widget.attrs.get("class", "")
+                    field.widget.attrs["class"] = f"{css} is-invalid".strip()

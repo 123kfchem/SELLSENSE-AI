@@ -171,7 +171,7 @@ class Sale(TenantModel):
     @property
     def report_payment_value(self):
         if self.payment_method == self.PAYMENT_CASH:
-            return "cash"
+            return str(self.total_amount)
         return str(self.mpesa_amount_sent or self.total_amount)
 
 

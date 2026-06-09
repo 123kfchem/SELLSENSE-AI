@@ -20,10 +20,12 @@ from .forms import (
     BusinessAuthenticationForm,
     BusinessProfileUpdateForm,
     BusinessRegistrationForm,
+    ContactForm,
     ItemForm,
     ItemReportForm,
     RoleSelectionForm,
     SaleForm,
+    SuperuserPasswordResetForm,
 )
 from .models import Business, Item, ItemReport, Sale, UserProfile
 from .pdf_reports import PDFGenerationError, build_daily_sales_pdf
@@ -48,7 +50,16 @@ class BusinessLoginView(LoginView):
 
 
 def home(request):
-    return render(request, "home.html")
+    contact_form = ContactForm()
+    if request.method == "POST" and request.POST.get("form_type") == "contact":
+        contact_form = ContactForm(request.POST)
+        if contact_form.is_valid():
+            messages.success(
+                request,
+                "Thank you for reaching out! Our team will respond to your inquiry shortly.",
+            )
+            return redirect(f"{reverse('home')}#contact")
+    return render(request, "home.html", {"contact_form": contact_form})
 
 
 def business_logout(request):
@@ -144,6 +155,30 @@ def superuser_dashboard(request):
                 update_form.save()
                 messages.success(request, f"{profile.user.username} profile updated.")
                 return redirect("superuser-dashboard")
+        elif action == "reset_password":
+            profile = get_object_or_404(
+                UserProfile.objects.select_related("user"),
+                pk=request.POST.get("profile_id"),
+            )
+            reset_form = SuperuserPasswordResetForm(request.POST, profile=profile)
+            if reset_form.is_valid():
+                reset_form.save()
+                updated_parts = []
+                if reset_form.cleaned_data.get("login_password"):
+                    updated_parts.append("login password")
+                if reset_form.cleaned_data.get("employer_password"):
+                    updated_parts.append("employer password")
+                messages.success(
+                    request,
+                    f"Updated {' and '.join(updated_parts)} for {profile.user.username}.",
+                )
+            else:
+                for error in reset_form.non_field_errors():
+                    messages.error(request, error)
+                for field_errors in reset_form.errors.values():
+                    for error in field_errors:
+                        messages.error(request, error)
+            return redirect("superuser-dashboard")
         form = BusinessRegistrationForm()
     else:
         form = BusinessRegistrationForm()
@@ -477,18 +512,27 @@ def employee_dashboard(request):
     my_daily_units = my_daily_sales.aggregate(total=Sum("quantity"))["total"] or 0
     my_daily_revenue = my_daily_sales.aggregate(total=Sum("total_amount"))["total"] or Decimal("0.00")
     item_prices = {str(item.pk): str(item.unit_price) for item in active_items}
+    item_stock = {
+        str(item.pk): {
+            "remaining": item.current_quantity,
+            "initial": item.initial_quantity,
+        }
+        for item in active_items
+    }
     return render(
         request,
         "employee_dashboard.html",
         {
             **_dashboard_switch_context(request),
             "sale_form": sale_form,
+            "active_items": active_items,
             "daily_sales": daily_sales,
             "daily_revenue": daily_revenue,
             "daily_units": daily_units,
             "my_daily_units": my_daily_units,
             "my_daily_revenue": my_daily_revenue,
             "item_prices": item_prices,
+            "item_stock": item_stock,
         },
     )
 
