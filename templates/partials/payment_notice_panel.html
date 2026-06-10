@@ -1,0 +1,57 @@
+{% if profile.business_id %}
+<details class="payment-notice-panel">
+    <summary class="btn btn-outline-warning btn-sm">Payment Notice</summary>
+    {% if profile.business.has_payment_notice %}
+    <p class="payment-notice-panel__status mb-2">
+        Current:
+        {% if profile.business.payment_status == "overdue" %}
+            <span class="badge text-bg-danger">Overdue</span>
+        {% else %}
+            <span class="badge text-bg-warning text-dark">Payment due</span>
+        {% endif %}
+        {% if profile.business.amount_due %} — KES {{ profile.business.amount_due }}{% endif %}
+        {% if profile.business.due_date %} — due {{ profile.business.due_date }}{% endif %}
+    </p>
+    {% endif %}
+    <form method="post" class="payment-notice-form">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="send_payment_notice">
+        <input type="hidden" name="profile_id" value="{{ profile.id }}">
+        <label class="form-label">Amount due (KES)</label>
+        <input
+            type="number"
+            name="amount_due"
+            class="form-control form-control-sm"
+            step="0.01"
+            min="0"
+            value="{{ profile.business.amount_due|default_if_none:'' }}"
+            required
+        >
+        <label class="form-label mt-2">Due date</label>
+        <input
+            type="date"
+            name="due_date"
+            class="form-control form-control-sm"
+            value="{% if profile.business.due_date %}{{ profile.business.due_date|date:'Y-m-d' }}{% endif %}"
+            required
+        >
+        <label class="form-label mt-2">Message to business</label>
+        <textarea
+            name="payment_notice"
+            class="form-control form-control-sm"
+            rows="3"
+            placeholder="e.g. Pay via M-Pesa Paybill 123456 to continue using SellSense AI."
+            required
+        >{{ profile.business.payment_notice }}</textarea>
+        <button type="submit" class="btn btn-warning btn-sm mt-2">Send Notice</button>
+    </form>
+    {% if profile.business.has_payment_notice %}
+    <form method="post" class="mt-2">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="clear_payment_notice">
+        <input type="hidden" name="profile_id" value="{{ profile.id }}">
+        <button type="submit" class="btn btn-success btn-sm">Mark as Paid</button>
+    </form>
+    {% endif %}
+</details>
+{% endif %}

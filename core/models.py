@@ -7,10 +7,30 @@ from django.db import models
 
 
 class Business(models.Model):
+    PAYMENT_OK = "ok"
+    PAYMENT_DUE = "due"
+    PAYMENT_OVERDUE = "overdue"
+    PAYMENT_STATUS_CHOICES = [
+        (PAYMENT_OK, "Paid / OK"),
+        (PAYMENT_DUE, "Payment due"),
+        (PAYMENT_OVERDUE, "Payment overdue"),
+    ]
+
     name = models.CharField(max_length=180)
     phone_number = models.CharField(max_length=30, blank=True)
     location = models.CharField(max_length=180, blank=True)
     is_active = models.BooleanField(default=True)
+    payment_status = models.CharField(
+        max_length=20,
+        choices=PAYMENT_STATUS_CHOICES,
+        default=PAYMENT_OK,
+    )
+    amount_due = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True
+    )
+    due_date = models.DateField(null=True, blank=True)
+    payment_notice = models.TextField(blank=True)
+    notice_sent_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -19,6 +39,22 @@ class Business(models.Model):
 
     def __str__(self):
         return self.name
+
+    def sync_payment_status(self):
+        from django.utils import timezone
+
+        if (
+            self.payment_status == self.PAYMENT_DUE
+            and self.due_date
+            and timezone.localdate() > self.due_date
+        ):
+            self.payment_status = self.PAYMENT_OVERDUE
+            return True
+        return False
+
+    @property
+    def has_payment_notice(self):
+        return self.payment_status in {self.PAYMENT_DUE, self.PAYMENT_OVERDUE}
 
 
 class TenantQuerySet(models.QuerySet):

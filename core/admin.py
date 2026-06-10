@@ -15,7 +15,17 @@ class TenantAdminMixin:
 
 @admin.register(Business)
 class BusinessAdmin(admin.ModelAdmin):
-    list_display = ("name", "phone_number", "location", "is_active", "created_at")
+    list_display = (
+        "name",
+        "phone_number",
+        "location",
+        "is_active",
+        "payment_status",
+        "amount_due",
+        "due_date",
+        "created_at",
+    )
+    list_filter = ("is_active", "payment_status")
     search_fields = ("name",)
 
 

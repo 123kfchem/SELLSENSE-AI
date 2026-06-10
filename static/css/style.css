@@ -422,6 +422,35 @@ main.container {
     margin-bottom: 0;
 }
 
+/* ── Services carousel ── */
+.services-carousel {
+    padding-bottom: 2.5rem;
+}
+
+.services-carousel__card {
+    max-width: 520px;
+    margin: 0 auto;
+    text-align: center;
+}
+
+.services-carousel__card .offering__icon {
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.services-carousel .carousel-indicators {
+    margin-bottom: 0;
+}
+
+.services-carousel .carousel-indicators [data-bs-target] {
+    background-color: var(--color-primary);
+}
+
+.services-carousel .carousel-control-prev,
+.services-carousel .carousel-control-next {
+    width: 8%;
+}
+
 /* ── Forms & Buttons ── */
 form p {
     margin-bottom: 10px;
@@ -774,6 +803,39 @@ th, td {
     font-size: 0.85rem;
     font-weight: 600;
     color: var(--color-text);
+}
+
+.payment-notice-panel {
+    margin-top: 8px;
+}
+
+.payment-notice-panel summary {
+    list-style: none;
+    cursor: pointer;
+    width: fit-content;
+}
+
+.payment-notice-panel summary::-webkit-details-marker {
+    display: none;
+}
+
+.payment-notice-form {
+    margin-top: 8px;
+    padding: 10px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-bg);
+    display: grid;
+    gap: 6px;
+    min-width: 220px;
+}
+
+.payment-notice-panel__status {
+    font-size: 0.85rem;
+}
+
+.payment-notice-banner strong {
+    display: block;
 }
 
 /* ── Charts ── */

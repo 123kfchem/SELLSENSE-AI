@@ -118,6 +118,30 @@
 
         {% endif %}
 
+        {% if payment_notice %}
+        <div class="alert alert-{% if payment_notice.status == 'overdue' %}danger{% else %}warning{% endif %} payment-notice-banner shadow-sm mb-3" role="alert">
+            <div class="d-flex align-items-start gap-2">
+                <i class="bi bi-exclamation-triangle-fill flex-shrink-0 mt-1" aria-hidden="true"></i>
+                <div>
+                    <strong>
+                        {% if payment_notice.status == 'overdue' %}
+                            Payment overdue — access will be restricted
+                        {% else %}
+                            Payment required to continue using SellSense AI
+                        {% endif %}
+                    </strong>
+                    <ul class="mb-0 mt-1 ps-3">
+                        {% if payment_notice.amount %}<li>Amount due: <strong>KES {{ payment_notice.amount }}</strong></li>{% endif %}
+                        {% if payment_notice.due_date %}<li>Due date: <strong>{{ payment_notice.due_date }}</strong></li>{% endif %}
+                    </ul>
+                    {% if payment_notice.message %}
+                    <p class="mb-0 mt-2">{{ payment_notice.message }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
         {% block content %}{% endblock %}
 
     </main>

@@ -15,6 +15,12 @@ def get_user_business(user):
     if profile is None or profile.business_id is None:
         raise TenantAccessError("Your account is not linked to a business.")
     business = profile.business
+    if business.sync_payment_status():
+        business.save(update_fields=["payment_status"])
+    if business.payment_status == business.PAYMENT_OVERDUE:
+        raise TenantAccessError(
+            "Your subscription payment is overdue. Contact admin to restore access."
+        )
     if not business.is_active or not profile.is_business_active:
         raise TenantAccessError(
             "Your business account has been deactivated. Contact admin."

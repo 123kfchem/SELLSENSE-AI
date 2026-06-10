@@ -23,6 +23,7 @@ from .forms import (
     ContactForm,
     ItemForm,
     ItemReportForm,
+    PaymentNoticeForm,
     RoleSelectionForm,
     SaleForm,
     SuperuserPasswordResetForm,
@@ -179,6 +180,52 @@ def superuser_dashboard(request):
                     for error in field_errors:
                         messages.error(request, error)
             return redirect("superuser-dashboard")
+        elif action == "send_payment_notice":
+            profile = get_object_or_404(
+                UserProfile.objects.select_related("business"),
+                pk=request.POST.get("profile_id"),
+            )
+            if not profile.business_id:
+                messages.error(request, "This account is not linked to a business.")
+                return redirect("superuser-dashboard")
+            notice_form = PaymentNoticeForm(request.POST, business=profile.business)
+            if notice_form.is_valid():
+                notice_form.save()
+                messages.success(
+                    request,
+                    f"Payment notice sent to {profile.business.name}. All users in this business will see it.",
+                )
+            else:
+                for field_errors in notice_form.errors.values():
+                    for error in field_errors:
+                        messages.error(request, error)
+            return redirect("superuser-dashboard")
+        elif action == "clear_payment_notice":
+            profile = get_object_or_404(
+                UserProfile.objects.select_related("business"),
+                pk=request.POST.get("profile_id"),
+            )
+            if profile.business_id:
+                business = profile.business
+                business.payment_status = Business.PAYMENT_OK
+                business.amount_due = None
+                business.due_date = None
+                business.payment_notice = ""
+                business.notice_sent_at = None
+                business.save(
+                    update_fields=[
+                        "payment_status",
+                        "amount_due",
+                        "due_date",
+                        "payment_notice",
+                        "notice_sent_at",
+                    ]
+                )
+                messages.success(
+                    request,
+                    f"Payment notice cleared for {business.name}.",
+                )
+            return redirect("superuser-dashboard")
         form = BusinessRegistrationForm()
     else:
         form = BusinessRegistrationForm()
@@ -205,7 +252,16 @@ def role_select(request):
     if not profile.business_id:
         messages.error(request, "Your account is not linked to a business. Contact the administrator.")
         return redirect("logout")
-    if not profile.is_business_active or not profile.business.is_active:
+    business = profile.business
+    if business.sync_payment_status():
+        business.save(update_fields=["payment_status"])
+    if business.payment_status == Business.PAYMENT_OVERDUE:
+        messages.error(
+            request,
+            "Your subscription payment is overdue. Contact admin to restore access.",
+        )
+        return redirect("logout")
+    if not profile.is_business_active or not business.is_active:
         messages.error(
             request,
             "Your business account has been deactivated. Contact admin.",
@@ -254,6 +310,11 @@ def _can_access_role(request, role):
     except UserProfile.DoesNotExist:
         return False
     if not profile.business_id or not profile.is_business_active or not profile.business.is_active:
+        return False
+    business = profile.business
+    if business.sync_payment_status():
+        business.save(update_fields=["payment_status"])
+    if business.payment_status == Business.PAYMENT_OVERDUE:
         return False
     session_role = request.session.get("active_role")
     if not session_role:

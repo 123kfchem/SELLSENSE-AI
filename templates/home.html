@@ -1,66 +1,92 @@
-{% extends "base.html" %}
-{% block content %}
-<section class="home-hero card mb-4">
-    <span class="home-hero__eyebrow">Smarter Retail Decisions</span>
-    <h1>Welcome to SellSense AI</h1>
-    <p class="lead">
-        SellSense AI helps businesses track sales, manage inventory, and make confident decisions
-        using real-time insights and practical AI recommendations.
-    </p>
-    <div class="d-flex flex-wrap gap-2 justify-content-center">
-        <a class="btn btn-primary btn-lg" href="{% url 'login' %}">Log in for Detailed Insights</a>
-        {% if user.is_authenticated %}
-            <a class="btn btn-outline-primary btn-lg" href="{% url 'role-select' %}">Go to Your Dashboard</a>
-        {% endif %}
-    </div>
-    <div class="ticker-wrap">
-        <div class="ticker">
-            <div class="ticker-item">Track daily sales and revenue in real time</div>
-            <div class="ticker-item">Manage inventory with role-based dashboards</div>
-            <div class="ticker-item">Generate weekly, monthly, and yearly reports</div>
-            <div class="ticker-item">Get AI-powered sales and stock recommendations</div>
-            <div class="ticker-item">Track daily sales and revenue in real time</div>
-            <div class="ticker-item">Manage inventory with role-based dashboards</div>
-            <div class="ticker-item">Generate weekly, monthly, and yearly reports</div>
-            <div class="ticker-item">Get AI-powered sales and stock recommendations</div>
-        </div>
-    </div>
-</section>
-
-<section id="about" class="card section-card mb-4">
-    <h2 class="section-card__title">About SellSense AI</h2>
-    <p class="mb-0">
-        We provide a simple and reliable platform for business owners and staff to monitor daily operations,
-        evaluate performance trends, and improve sales outcomes with less guesswork.
-    </p>
-</section>
-
-<section id="services" class="card section-card mb-4">
-    <h2 class="section-card__title">Key Offerings</h2>
-    <div class="grid two-col">
-        <article class="offering offering--primary">
-            <div class="offering__icon"><i class="bi bi-box-seam" aria-hidden="true"></i></div>
-            <h3>Inventory Monitoring</h3>
-            <p>Track active, cancelled, and deleted stock items across your business in one place.</p>
-        </article>
-        <article class="offering offering--success">
-            <div class="offering__icon"><i class="bi bi-graph-up-arrow" aria-hidden="true"></i></div>
-            <h3>Sales Intelligence</h3>
-            <p>Capture transactions quickly and view daily, weekly, or monthly performance reports.</p>
-        </article>
-        <article class="offering offering--accent">
-            <div class="offering__icon"><i class="bi bi-stars" aria-hidden="true"></i></div>
-            <h3>AI Suggestions</h3>
-            <p>Receive recommendation support to improve item strategy and operational efficiency.</p>
-        </article>
-        <article class="offering offering--warning">
-            <div class="offering__icon"><i class="bi bi-people" aria-hidden="true"></i></div>
-            <h3>Role-Based Dashboards</h3>
-            <p>Separate dashboards ensure each user sees tools and data relevant to their role.</p>
-        </article>
-    </div>
-</section>
-
-{% include "partials/contact_section.html" %}
-{% endblock %}
-
+{% extends "base.html" %}
+{% block content %}
+<section class="home-hero card mb-4">
+    <span class="home-hero__eyebrow">Smarter Retail Decisions</span>
+    <h1>Welcome to SellSense AI</h1>
+    <p class="lead">
+        SellSense AI helps businesses track sales, manage inventory, and make confident decisions
+        using real-time insights and practical AI recommendations.
+    </p>
+    <div class="d-flex flex-wrap gap-2 justify-content-center">
+        <a class="btn btn-primary btn-lg" href="{% url 'login' %}">Log in for Detailed Insights</a>
+        {% if user.is_authenticated %}
+            <a class="btn btn-outline-primary btn-lg" href="{% url 'role-select' %}">Go to Your Dashboard</a>
+        {% endif %}
+    </div>
+    <div class="ticker-wrap">
+        <div class="ticker">
+            <div class="ticker-item">Track daily sales and revenue in real time</div>
+            <div class="ticker-item">Manage inventory with role-based dashboards</div>
+            <div class="ticker-item">Generate weekly, monthly, and yearly reports</div>
+            <div class="ticker-item">Get AI-powered sales and stock recommendations</div>
+            <div class="ticker-item">Track daily sales and revenue in real time</div>
+            <div class="ticker-item">Manage inventory with role-based dashboards</div>
+            <div class="ticker-item">Generate weekly, monthly, and yearly reports</div>
+            <div class="ticker-item">Get AI-powered sales and stock recommendations</div>
+        </div>
+    </div>
+</section>
+
+<section id="about" class="card section-card mb-4">
+    <h2 class="section-card__title">About SellSense AI</h2>
+    <p class="mb-0">
+        We provide a simple and reliable platform for business owners and staff to monitor daily operations,
+        evaluate performance trends, and improve sales outcomes with less guesswork.
+    </p>
+</section>
+
+<section id="services" class="card section-card mb-4">
+    <h2 class="section-card__title">Key Offerings</h2>
+    <div id="servicesCarousel" class="carousel slide services-carousel" data-bs-ride="carousel" data-bs-interval="4500">
+        <div class="carousel-indicators">
+            <button type="button" data-bs-target="#servicesCarousel" data-bs-slide-to="0" class="active" aria-label="Inventory Monitoring"></button>
+            <button type="button" data-bs-target="#servicesCarousel" data-bs-slide-to="1" aria-label="Sales Intelligence"></button>
+            <button type="button" data-bs-target="#servicesCarousel" data-bs-slide-to="2" aria-label="AI Suggestions"></button>
+            <button type="button" data-bs-target="#servicesCarousel" data-bs-slide-to="3" aria-label="Role-Based Dashboards"></button>
+        </div>
+
+        <div class="carousel-inner">
+            <div class="carousel-item active">
+                <article class="offering offering--primary services-carousel__card">
+                    <div class="offering__icon"><i class="bi bi-box-seam" aria-hidden="true"></i></div>
+                    <h3>Inventory Monitoring</h3>
+                    <p>Track active, cancelled, and deleted stock items across your business in one place.</p>
+                </article>
+            </div>
+            <div class="carousel-item">
+                <article class="offering offering--success services-carousel__card">
+                    <div class="offering__icon"><i class="bi bi-graph-up-arrow" aria-hidden="true"></i></div>
+                    <h3>Sales Intelligence</h3>
+                    <p>Capture transactions quickly and view daily, weekly, or monthly performance reports.</p>
+                </article>
+            </div>
+            <div class="carousel-item">
+                <article class="offering offering--accent services-carousel__card">
+                    <div class="offering__icon"><i class="bi bi-stars" aria-hidden="true"></i></div>
+                    <h3>AI Suggestions</h3>
+                    <p>Receive recommendation support to improve item strategy and operational efficiency.</p>
+                </article>
+            </div>
+            <div class="carousel-item">
+                <article class="offering offering--warning services-carousel__card">
+                    <div class="offering__icon"><i class="bi bi-people" aria-hidden="true"></i></div>
+                    <h3>Role-Based Dashboards</h3>
+                    <p>Separate dashboards ensure each user sees tools and data relevant to their role.</p>
+                </article>
+            </div>
+        </div>
+
+        <button class="carousel-control-prev" type="button" data-bs-target="#servicesCarousel" data-bs-slide="prev">
+            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Previous</span>
+        </button>
+        <button class="carousel-control-next" type="button" data-bs-target="#servicesCarousel" data-bs-slide="next">
+            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Next</span>
+        </button>
+    </div>
+</section>
+
+{% include "partials/contact_section.html" %}
+{% endblock %}
+

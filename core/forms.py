@@ -26,6 +26,13 @@ class BusinessAuthenticationForm(AuthenticationForm):
                 code="no_business",
             )
         business = profile.business
+        if business.sync_payment_status():
+            business.save(update_fields=["payment_status"])
+        if business.payment_status == business.PAYMENT_OVERDUE:
+            raise ValidationError(
+                "Your subscription payment is overdue. Contact admin to restore access.",
+                code="payment_overdue",
+            )
         if not business.is_active or not profile.is_business_active:
             raise ValidationError(
                 self.error_messages["business_inactive"],
@@ -225,6 +232,60 @@ class BusinessProfileUpdateForm(forms.Form):
         profile.is_business_active = self.cleaned_data.get("is_business_active", False)
         profile.save(update_fields=["role", "is_business_active"])
         return profile
+
+
+class PaymentNoticeForm(forms.Form):
+    amount_due = forms.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        min_value=0,
+        label="Amount due",
+    )
+    due_date = forms.DateField(
+        label="Due date",
+        widget=forms.DateInput(attrs={"type": "date", "class": "form-control form-control-sm"}),
+    )
+    payment_notice = forms.CharField(
+        label="Message to business",
+        widget=forms.Textarea(
+            attrs={
+                "rows": 3,
+                "class": "form-control form-control-sm",
+                "placeholder": "e.g. Pay via M-Pesa Paybill 123456 to continue using SellSense AI.",
+            }
+        ),
+    )
+
+    def __init__(self, *args, business=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.business = business
+        if business and business.has_payment_notice:
+            if business.amount_due is not None:
+                self.fields["amount_due"].initial = business.amount_due
+            if business.due_date:
+                self.fields["due_date"].initial = business.due_date
+            if business.payment_notice:
+                self.fields["payment_notice"].initial = business.payment_notice
+
+    def save(self):
+        from django.utils import timezone
+
+        business = self.business
+        business.amount_due = self.cleaned_data["amount_due"]
+        business.due_date = self.cleaned_data["due_date"]
+        business.payment_notice = self.cleaned_data["payment_notice"]
+        business.payment_status = Business.PAYMENT_DUE
+        business.notice_sent_at = timezone.now()
+        business.save(
+            update_fields=[
+                "amount_due",
+                "due_date",
+                "payment_notice",
+                "payment_status",
+                "notice_sent_at",
+            ]
+        )
+        return business
 
 
 class ContactForm(forms.Form):
