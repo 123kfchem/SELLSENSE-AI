@@ -228,3 +228,25 @@ class ItemReport(TenantModel):
 
     def __str__(self):
         return f"Report for {self.item.name}"
+
+
+class Expense(TenantModel):
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    reason = models.TextField()
+    expense_date = models.DateField()
+    recorded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="recorded_expenses",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["business", "expense_date"]),
+        ]
+        ordering = ["-expense_date", "-created_at"]
+
+    def __str__(self):
+        return f"{self.amount} on {self.expense_date}"

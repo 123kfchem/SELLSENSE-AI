@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Business, Item, ItemReport, Sale, UserProfile
+from .models import Business, Expense, Item, ItemReport, Sale, UserProfile
 
 
 class TenantAdminMixin:
@@ -48,3 +48,8 @@ class SaleAdmin(TenantAdminMixin, admin.ModelAdmin):
 @admin.register(ItemReport)
 class ItemReportAdmin(TenantAdminMixin, admin.ModelAdmin):
     list_display = ("item", "business", "reported_by", "created_at")
+
+
+@admin.register(Expense)
+class ExpenseAdmin(TenantAdminMixin, admin.ModelAdmin):
+    list_display = ("amount", "business", "reason", "expense_date", "recorded_by", "created_at")

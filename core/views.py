@@ -21,6 +21,7 @@ from .forms import (
     BusinessProfileUpdateForm,
     BusinessRegistrationForm,
     ContactForm,
+    ExpenseForm,
     ItemForm,
     ItemReportForm,
     PaymentNoticeForm,
@@ -28,12 +29,14 @@ from .forms import (
     SaleForm,
     SuperuserPasswordResetForm,
 )
-from .models import Business, Item, ItemReport, Sale, UserProfile
+from .models import Business, Expense, Item, ItemReport, Sale, UserProfile
 from .pdf_reports import PDFGenerationError, build_daily_sales_pdf
 from .services import (
     ai_item_suggestions,
+    expenses_summary,
     ml_sales_analysis_table,
-    period_revenue_report,
+    period_profit_report,
+    profit_summary,
     sales_summary,
 )
 from .tenancy import TenantAccessError, get_tenant_object, get_user_business, scoped_qs
@@ -385,6 +388,8 @@ def employer_dashboard(request):
     ai_data = ai_item_suggestions(business)
     ml_analysis_rows = ml_sales_analysis_table(business, "weekly")
     daily_sales, daily_revenue, daily_units = sales_summary(business, "daily")
+    daily_profit = profit_summary(business, "daily")
+    expenses = scoped_qs(Expense, request.user).order_by("-expense_date", "-created_at")
 
     if request.method == "POST":
         action = request.POST.get("action")
@@ -450,6 +455,9 @@ def employer_dashboard(request):
         "daily_sales": daily_sales,
         "daily_revenue": daily_revenue,
         "daily_units": daily_units,
+        "daily_expenses": daily_profit["expenses"],
+        "daily_net_profit": daily_profit["net_profit"],
+        "expenses": expenses,
         "stock_insights": stock_insights,
     }
     return render(request, "employer_dashboard.html", context)
@@ -499,6 +507,8 @@ def reports_view(request, period):
 
     if period == "daily":
         sales, revenue, units = sales_summary(business, period)
+        daily_profit = profit_summary(business, period)
+        daily_expenses, _ = expenses_summary(business, period)
         ml_analysis_rows = ml_sales_analysis_table(business, period)
         return render(
             request,
@@ -508,17 +518,20 @@ def reports_view(request, period):
                 "sales": sales,
                 "revenue": revenue,
                 "units": units,
+                "expenses": daily_profit["expenses"],
+                "net_profit": daily_profit["net_profit"],
+                "daily_expenses": daily_expenses,
                 "ml_analysis_rows": ml_analysis_rows,
             },
         )
 
-    revenue_report = period_revenue_report(business, period)
+    profit_report = period_profit_report(business, period)
     return render(
         request,
         "reports.html",
         {
             "period": period,
-            "revenue_report": revenue_report,
+            "revenue_report": profit_report,
         },
     )
 
@@ -536,26 +549,44 @@ def employee_dashboard(request):
         current_quantity__gt=0,
     ).order_by("name")
     sale_form = SaleForm(business=business)
+    expense_form = ExpenseForm()
 
     if request.method == "POST":
-        sale_form = SaleForm(request.POST, business=business)
-        if sale_form.is_valid():
-            sale = sale_form.save(commit=False)
-            recorded = _record_sale_with_stock(
-                business=business,
-                item=sale.item,
-                quantity=sale.quantity,
-                user=request.user,
-                payment_method=sale.payment_method,
-                mpesa_amount_sent=sale.mpesa_amount_sent,
-            )
-            if not recorded:
-                messages.error(request, f"Insufficient stock for {sale.item.name}.")
+        if request.POST.get("action") == "add_expense":
+            expense_form = ExpenseForm(request.POST)
+            if expense_form.is_valid():
+                expense = expense_form.save(commit=False)
+                expense.business = business
+                expense.recorded_by = request.user
+                expense.save()
+                messages.success(request, "Expense recorded successfully.")
                 return redirect("employee-dashboard")
-            messages.success(request, "Sale processed successfully.")
-            return redirect("employee-dashboard")
+        else:
+            sale_form = SaleForm(request.POST, business=business)
+            if sale_form.is_valid():
+                sale = sale_form.save(commit=False)
+                recorded = _record_sale_with_stock(
+                    business=business,
+                    item=sale.item,
+                    quantity=sale.quantity,
+                    user=request.user,
+                    payment_method=sale.payment_method,
+                    mpesa_amount_sent=sale.mpesa_amount_sent,
+                )
+                if not recorded:
+                    messages.error(request, f"Insufficient stock for {sale.item.name}.")
+                    return redirect("employee-dashboard")
+                messages.success(request, "Sale processed successfully.")
+                return redirect("employee-dashboard")
 
     daily_sales, daily_revenue, daily_units = sales_summary(business, "daily")
+    daily_profit = profit_summary(business, "daily")
+    today = timezone.localdate()
+    my_daily_expenses = (
+        scoped_qs(Expense, request.user)
+        .filter(recorded_by=request.user, expense_date=today)
+        .order_by("-created_at")
+    )
     my_daily_sales = daily_sales.filter(sold_by=request.user)
     my_daily_units = my_daily_sales.aggregate(total=Sum("quantity"))["total"] or 0
     my_daily_revenue = my_daily_sales.aggregate(total=Sum("total_amount"))["total"] or Decimal("0.00")
@@ -573,12 +604,16 @@ def employee_dashboard(request):
         {
             **_dashboard_switch_context(request),
             "sale_form": sale_form,
+            "expense_form": expense_form,
             "active_items": active_items,
             "daily_sales": daily_sales,
             "daily_revenue": daily_revenue,
             "daily_units": daily_units,
+            "daily_expenses": daily_profit["expenses"],
+            "daily_net_profit": daily_profit["net_profit"],
             "my_daily_units": my_daily_units,
             "my_daily_revenue": my_daily_revenue,
+            "my_daily_expenses": my_daily_expenses,
             "item_prices": item_prices,
             "item_stock": item_stock,
         },

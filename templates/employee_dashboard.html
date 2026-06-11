@@ -1,89 +1,132 @@
-{% extends "base.html" %}
-{% block content %}
-<section class="grid two-col">
-    <div class="card">
-        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
-            <h2 class="mb-0">Employee Dashboard</h2>
-        </div>
-        <p>Select items for customers and process payment. Sold quantities are deducted from the stock the employer added.</p>
-        <form method="post" id="sale-form">
-            {% csrf_token %}
-            {{ sale_form.as_p }}
-            <p><strong>Auto Amount:</strong> <span id="sale-total-preview">0.00</span></p>
-            <button type="submit" class="btn btn-primary">Process Payment</button>
-        </form>
-    </div>
-
-    <div class="card">
-        <h2>Available Stock</h2>
-        <div class="table-responsive">
-        <table class="table table-striped table-hover align-middle">
-            <thead>
-                <tr><th>Item</th><th>Initial Qty</th><th>Remaining</th></tr>
-            </thead>
-            <tbody>
-                {% for item in active_items %}
-                <tr>
-                    <td>{{ item.name }}</td>
-                    <td>{{ item.initial_quantity }}</td>
-                    <td>{{ item.current_quantity }}</td>
-                </tr>
-                {% empty %}
-                <tr><td colspan="3">No items in stock.</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        </div>
-    </div>
-
-    <div class="card">
-        <h2>Today Sales Overview</h2>
-        <div class="grid two-col">
-            <div class="dashboard-stat">
-                <div class="dashboard-stat__label">All Units Sold</div>
-                <div class="dashboard-stat__value">{{ daily_units }}</div>
-            </div>
-            <div class="dashboard-stat">
-                <div class="dashboard-stat__label">All Revenue</div>
-                <div class="dashboard-stat__value">{{ daily_revenue }}</div>
-            </div>
-            <div class="dashboard-stat">
-                <div class="dashboard-stat__label">Your Units Sold</div>
-                <div class="dashboard-stat__value">{{ my_daily_units }}</div>
-            </div>
-            <div class="dashboard-stat">
-                <div class="dashboard-stat__label">Your Revenue</div>
-                <div class="dashboard-stat__value">{{ my_daily_revenue }}</div>
-            </div>
-        </div>
-    </div>
-</section>
-{{ item_prices|json_script:"item-price-data" }}
-{{ item_stock|json_script:"item-stock-data" }}
-
-<section class="card">
-    <h2>Daily Sales</h2>
-    <div class="table-responsive">
-    <table class="table table-striped table-hover align-middle">
-        <thead>
-            <tr><th>Item</th><th>Qty</th><th>Payment</th><th>Reported Value</th><th>Sold By</th><th>Time</th></tr>
-        </thead>
-        <tbody>
-            {% for sale in daily_sales %}
-            <tr>
-                <td>{{ sale.item.name }}</td>
-                <td>{{ sale.quantity }}</td>
-                <td>{{ sale.payment_method }}</td>
-                <td>{{ sale.report_payment_value }}</td>
-                <td>{{ sale.sold_by.username|default:"N/A" }}</td>
-                <td>{{ sale.sold_at|date:"Y-m-d H:i" }}</td>
-            </tr>
-            {% empty %}
-            <tr><td colspan="6">No sales recorded today.</td></tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    </div>
-</section>
-{% endblock %}
-
+{% extends "base.html" %}
+{% block content %}
+<section class="grid two-col">
+    <div class="card">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+            <h2 class="mb-0">Employee Dashboard</h2>
+        </div>
+        <p>Select items for customers and process payment. Sold quantities are deducted from the stock the employer added.</p>
+        <form method="post" id="sale-form">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="record_sale">
+            {{ sale_form.as_p }}
+            <p><strong>Auto Amount:</strong> <span id="sale-total-preview">0.00</span></p>
+            <button type="submit" class="btn btn-primary">Process Payment</button>
+        </form>
+    </div>
+
+    <div class="card">
+        <h2>Available Stock</h2>
+        <div class="table-responsive">
+        <table class="table table-striped table-hover align-middle">
+            <thead>
+                <tr><th>Item</th><th>Initial Qty</th><th>Remaining</th></tr>
+            </thead>
+            <tbody>
+                {% for item in active_items %}
+                <tr>
+                    <td>{{ item.name }}</td>
+                    <td>{{ item.initial_quantity }}</td>
+                    <td>{{ item.current_quantity }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="3">No items in stock.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Record Expense</h2>
+        <p>Log a business expense with the amount and reason.</p>
+        <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="add_expense">
+            {{ expense_form.as_p }}
+            <button type="submit" class="btn btn-warning">Submit Expense</button>
+        </form>
+    </div>
+
+    <div class="card">
+        <h2>Today Sales Overview</h2>
+        <div class="grid two-col">
+            <div class="dashboard-stat">
+                <div class="dashboard-stat__label">All Units Sold</div>
+                <div class="dashboard-stat__value">{{ daily_units }}</div>
+            </div>
+            <div class="dashboard-stat">
+                <div class="dashboard-stat__label">Total Sales</div>
+                <div class="dashboard-stat__value">{{ daily_revenue }}</div>
+            </div>
+            <div class="dashboard-stat">
+                <div class="dashboard-stat__label">Total Expenses</div>
+                <div class="dashboard-stat__value">{{ daily_expenses }}</div>
+            </div>
+            <div class="dashboard-stat">
+                <div class="dashboard-stat__label">Final Amount</div>
+                <div class="dashboard-stat__value">{{ daily_net_profit }}</div>
+            </div>
+            <div class="dashboard-stat">
+                <div class="dashboard-stat__label">Your Units Sold</div>
+                <div class="dashboard-stat__value">{{ my_daily_units }}</div>
+            </div>
+            <div class="dashboard-stat">
+                <div class="dashboard-stat__label">Your Revenue</div>
+                <div class="dashboard-stat__value">{{ my_daily_revenue }}</div>
+            </div>
+        </div>
+    </div>
+</section>
+{{ item_prices|json_script:"item-price-data" }}
+{{ item_stock|json_script:"item-stock-data" }}
+
+<section class="card">
+    <h2>Daily Sales</h2>
+    <div class="table-responsive">
+    <table class="table table-striped table-hover align-middle">
+        <thead>
+            <tr><th>Item</th><th>Qty</th><th>Payment</th><th>Reported Value</th><th>Sold By</th><th>Time</th></tr>
+        </thead>
+        <tbody>
+            {% for sale in daily_sales %}
+            <tr>
+                <td>{{ sale.item.name }}</td>
+                <td>{{ sale.quantity }}</td>
+                <td>{{ sale.payment_method }}</td>
+                <td>{{ sale.report_payment_value }}</td>
+                <td>{{ sale.sold_by.username|default:"N/A" }}</td>
+                <td>{{ sale.sold_at|date:"Y-m-d H:i" }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6">No sales recorded today.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</section>
+
+<section class="card">
+    <h2>Your Expenses Today</h2>
+    <div class="table-responsive">
+    <table class="table table-striped table-hover align-middle">
+        <thead>
+            <tr><th>Amount</th><th>Reason</th><th>Date</th><th>Submitted</th></tr>
+        </thead>
+        <tbody>
+            {% for expense in my_daily_expenses %}
+            <tr>
+                <td>{{ expense.amount }}</td>
+                <td>{{ expense.reason }}</td>
+                <td>{{ expense.expense_date }}</td>
+                <td>{{ expense.created_at|date:"Y-m-d H:i" }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4">No expenses recorded by you today.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</section>
+{% endblock %}
+

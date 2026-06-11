@@ -6,7 +6,7 @@ from django.db.models import F, Sum
 from django.db.models.functions import TruncDate, TruncMonth, TruncWeek
 from django.utils import timezone
 
-from .models import Sale
+from .models import Expense, Sale
 
 
 def _local_now():
@@ -383,4 +383,168 @@ def period_revenue_report(business, period):
         return monthly_revenue_report(business)
     if period == "yearly":
         return yearly_revenue_report(business)
+    return None
+
+
+def _period_start_day(period="daily"):
+    local_now = timezone.localtime(timezone.now())
+    start_local = local_now.replace(hour=0, minute=0, second=0, microsecond=0)
+    if period == "weekly":
+        start_local = start_local - timedelta(days=7)
+    elif period == "monthly":
+        start_local = start_local - timedelta(days=30)
+    return start_local.date()
+
+
+def expenses_summary(business, period="daily"):
+    start_day = _period_start_day(period)
+    expenses = (
+        Expense.objects.for_business(business)
+        .filter(expense_date__gte=start_day)
+        .select_related("recorded_by")
+    )
+    total_expenses = expenses.aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
+    return expenses, total_expenses
+
+
+def profit_summary(business, period="daily"):
+    _, total_revenue, total_units = sales_summary(business, period)
+    _, total_expenses = expenses_summary(business, period)
+    return {
+        "revenue": total_revenue,
+        "expenses": total_expenses,
+        "net_profit": total_revenue - total_expenses,
+        "units": total_units,
+    }
+
+
+def _expense_totals_by_day(business, start_day, end_day):
+    return {
+        row["expense_date"]: row["total"] or Decimal("0.00")
+        for row in (
+            Expense.objects.for_business(business)
+            .filter(expense_date__gte=start_day, expense_date__lte=end_day)
+            .values("expense_date")
+            .annotate(total=Sum("amount"))
+        )
+    }
+
+
+def weekly_profit_report(business):
+    revenue_report = weekly_revenue_report(business)
+    today = _local_today()
+    start_day = today - timedelta(days=6)
+    daily_expenses = _expense_totals_by_day(business, start_day, today)
+
+    enriched_rows = []
+    for offset, row in enumerate(revenue_report["rows"]):
+        day = start_day + timedelta(days=offset)
+        expenses = daily_expenses.get(day, Decimal("0.00"))
+        enriched_rows.append(
+            {
+                **row,
+                "expenses": expenses,
+                "net_profit": row["revenue"] - expenses,
+            }
+        )
+    total_expenses = _decimal_sum(row["expenses"] for row in enriched_rows)
+    return {
+        **revenue_report,
+        "rows": enriched_rows,
+        "total_expenses": total_expenses,
+        "net_profit": revenue_report["total_revenue"] - total_expenses,
+    }
+
+
+def monthly_profit_report(business):
+    revenue_report = monthly_revenue_report(business)
+    today = _local_today()
+    start_day = today - timedelta(days=29)
+
+    weekly_expenses = {}
+    for row in (
+        Expense.objects.for_business(business)
+        .filter(expense_date__gte=start_day, expense_date__lte=today)
+        .annotate(week=TruncWeek("expense_date", tzinfo=timezone.get_current_timezone()))
+        .values("week")
+        .annotate(total=Sum("amount"))
+        .order_by("week")
+    ):
+        weekly_expenses[_as_date(row["week"])] = row["total"] or Decimal("0.00")
+
+    enriched_rows = []
+    week_start = start_day - timedelta(days=start_day.weekday())
+    for row in revenue_report["rows"]:
+        expenses = weekly_expenses.get(_as_date(week_start), Decimal("0.00"))
+        enriched_rows.append(
+            {
+                **row,
+                "expenses": expenses,
+                "net_profit": row["revenue"] - expenses,
+            }
+        )
+        week_start += timedelta(days=7)
+
+    total_expenses = _decimal_sum(row["expenses"] for row in enriched_rows)
+    return {
+        **revenue_report,
+        "rows": enriched_rows,
+        "total_expenses": total_expenses,
+        "net_profit": revenue_report["total_revenue"] - total_expenses,
+    }
+
+
+def yearly_profit_report(business):
+    revenue_report = yearly_revenue_report(business)
+    today = _local_today()
+    month_cursor = today.replace(day=1)
+    month_starts = []
+    for _ in range(12):
+        month_starts.append(month_cursor)
+        if month_cursor.month == 1:
+            month_cursor = month_cursor.replace(year=month_cursor.year - 1, month=12)
+        else:
+            month_cursor = month_cursor.replace(month=month_cursor.month - 1)
+    month_starts.reverse()
+
+    monthly_expenses = {}
+    for row in (
+        Expense.objects.for_business(business)
+        .filter(expense_date__gte=month_starts[0], expense_date__lte=today)
+        .annotate(month=TruncMonth("expense_date", tzinfo=timezone.get_current_timezone()))
+        .values("month")
+        .annotate(total=Sum("amount"))
+        .order_by("month")
+    ):
+        month_start = _as_date(row["month"])
+        if month_start is not None:
+            monthly_expenses[month_start.replace(day=1)] = row["total"] or Decimal("0.00")
+
+    enriched_rows = []
+    for month_start, row in zip(month_starts, revenue_report["rows"]):
+        expenses = monthly_expenses.get(month_start, Decimal("0.00"))
+        enriched_rows.append(
+            {
+                **row,
+                "expenses": expenses,
+                "net_profit": row["revenue"] - expenses,
+            }
+        )
+
+    total_expenses = _decimal_sum(row["expenses"] for row in enriched_rows)
+    return {
+        **revenue_report,
+        "rows": enriched_rows,
+        "total_expenses": total_expenses,
+        "net_profit": revenue_report["total_revenue"] - total_expenses,
+    }
+
+
+def period_profit_report(business, period):
+    if period == "weekly":
+        return weekly_profit_report(business)
+    if period == "monthly":
+        return monthly_profit_report(business)
+    if period == "yearly":
+        return yearly_profit_report(business)
     return None

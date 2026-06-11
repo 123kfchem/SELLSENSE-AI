@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 
-from .models import Business, Item, ItemReport, Sale, UserProfile
+from .models import Business, Expense, Item, ItemReport, Sale, UserProfile
 
 
 class BusinessAuthenticationForm(AuthenticationForm):
@@ -60,6 +60,26 @@ class ItemReportForm(forms.ModelForm):
         model = ItemReport
         fields = ["note"]
         widgets = {"note": forms.Textarea(attrs={"rows": 3})}
+
+
+class ExpenseForm(forms.ModelForm):
+    class Meta:
+        model = Expense
+        fields = ["amount", "reason", "expense_date"]
+        widgets = {
+            "reason": forms.Textarea(
+                attrs={"rows": 3, "placeholder": "Reason for this expense"}
+            ),
+            "expense_date": forms.DateInput(attrs={"type": "date", "class": "form-control"}),
+            "amount": forms.NumberInput(attrs={"class": "form-control", "step": "0.01", "min": "0.01"}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not self.is_bound and not self.initial.get("expense_date"):
+            from django.utils import timezone
+
+            self.fields["expense_date"].initial = timezone.localdate()
 
 
 class SaleForm(forms.ModelForm):
