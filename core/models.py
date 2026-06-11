@@ -31,6 +31,11 @@ class Business(models.Model):
     due_date = models.DateField(null=True, blank=True)
     payment_notice = models.TextField(blank=True)
     notice_sent_at = models.DateTimeField(null=True, blank=True)
+    year_start_date = models.DateField(
+        null=True,
+        blank=True,
+        help_text="Date of the first recorded sale; anchors the business year for yearly reports.",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

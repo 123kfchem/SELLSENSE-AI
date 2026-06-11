@@ -252,6 +252,11 @@
                 <a class="btn btn-outline-primary btn-sm" href="{% url 'reports' 'monthly' %}">Monthly</a>
                 <a class="btn btn-outline-primary btn-sm" href="{% url 'reports' 'yearly' %}">Yearly</a>
             </div>
+            <div class="d-flex gap-2 flex-wrap mt-2">
+                <a class="btn btn-outline-secondary btn-sm" href="{% url 'report-pdf' 'weekly' %}">Weekly PDF</a>
+                <a class="btn btn-outline-secondary btn-sm" href="{% url 'report-pdf' 'monthly' %}">Monthly PDF</a>
+                <a class="btn btn-outline-secondary btn-sm" href="{% url 'report-pdf' 'yearly' %}">Yearly PDF</a>
+            </div>
         </section>
     </div>
 

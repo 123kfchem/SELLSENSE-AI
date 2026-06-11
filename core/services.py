@@ -1,4 +1,5 @@
 from collections import defaultdict
+import calendar
 from datetime import datetime, timedelta
 from decimal import Decimal
 
@@ -6,7 +7,7 @@ from django.db.models import F, Sum
 from django.db.models.functions import TruncDate, TruncMonth, TruncWeek
 from django.utils import timezone
 
-from .models import Expense, Sale
+from .models import Business, Expense, Sale
 
 
 def _local_now():
@@ -24,8 +25,19 @@ def _aware_start_of_day(day):
     return start
 
 
+MONEY_QUANTIZE = Decimal("0.01")
+
+
+def _quantize_money(value):
+    if value is None:
+        return Decimal("0.00")
+    return Decimal(value).quantize(MONEY_QUANTIZE)
+
+
 def _decimal_sum(values):
-    return sum((value or Decimal("0.00") for value in values), Decimal("0.00"))
+    return _quantize_money(
+        sum((value or Decimal("0.00") for value in values), Decimal("0.00"))
+    )
 
 
 def _as_date(value):
@@ -153,7 +165,7 @@ def sales_summary(business, period="daily"):
         .filter(sold_at__gte=start_local)
         .select_related("item", "sold_by")
     )
-    total_revenue = sales.aggregate(total=Sum("total_amount"))["total"] or Decimal("0.00")
+    total_revenue = _quantize_money(sales.aggregate(total=Sum("total_amount"))["total"])
     total_units = sales.aggregate(total=Sum("quantity"))["total"] or 0
     return sales, total_revenue, total_units
 
@@ -261,7 +273,7 @@ def weekly_revenue_report(business):
     start_dt = _aware_start_of_day(start_day)
 
     daily_totals = {
-        _as_date(row["day"]): row["revenue"] or Decimal("0.00")
+        _as_date(row["day"]): _quantize_money(row["revenue"])
         for row in (
             Sale.objects.for_business(business)
             .filter(sold_at__gte=start_dt)
@@ -305,7 +317,7 @@ def monthly_revenue_report(business):
         .annotate(revenue=Sum("total_amount"))
         .order_by("week")
     ):
-        weekly_totals[_as_date(row["week"])] = row["revenue"] or Decimal("0.00")
+        weekly_totals[_as_date(row["week"])] = _quantize_money(row["revenue"])
 
     rows = []
     week_start = start_day - timedelta(days=start_day.weekday())
@@ -329,20 +341,72 @@ def monthly_revenue_report(business):
     }
 
 
-def yearly_revenue_report(business):
-    """Revenue per month for the last 12 months (including current month)."""
-    today = _local_today()
-    month_cursor = today.replace(day=1)
-    month_starts = []
-    for _ in range(12):
-        month_starts.append(month_cursor)
-        if month_cursor.month == 1:
-            month_cursor = month_cursor.replace(year=month_cursor.year - 1, month=12)
-        else:
-            month_cursor = month_cursor.replace(month=month_cursor.month - 1)
-    month_starts.reverse()
-    start_dt = _aware_start_of_day(month_starts[0])
+def _add_months(day, months):
+    month_index = day.month - 1 + months
+    year = day.year + month_index // 12
+    month = month_index % 12 + 1
+    max_day = calendar.monthrange(year, month)[1]
+    return day.replace(year=year, month=month, day=min(day.day, max_day))
 
+
+def _business_year_end(month_start):
+    last_month = _add_months(month_start.replace(day=1), 11)
+    return last_month.replace(day=calendar.monthrange(last_month.year, last_month.month)[1])
+
+
+def _current_business_year_start(year_start_date, today):
+    period_start = year_start_date.replace(day=1)
+    while _business_year_end(period_start) < today:
+        period_start = _add_months(period_start, 12)
+    return period_start
+
+
+def _business_year_bounds(business):
+    if not business.year_start_date:
+        return [], None, None
+
+    today = _local_today()
+    period_start = _current_business_year_start(business.year_start_date, today)
+    month_starts = [_add_months(period_start, offset) for offset in range(12)]
+    return month_starts, period_start, _business_year_end(period_start)
+
+
+def ensure_business_year_start(business, sale_datetime):
+    if business.year_start_date:
+        return business.year_start_date
+
+    local_date = timezone.localtime(sale_datetime).date()
+    updated = Business.objects.filter(
+        pk=business.pk,
+        year_start_date__isnull=True,
+    ).update(year_start_date=local_date)
+    if updated:
+        business.year_start_date = local_date
+    return business.year_start_date
+
+
+def _empty_business_year_report(title, summary_label):
+    return {
+        "rows": [],
+        "total_revenue": Decimal("0.00"),
+        "title": title,
+        "summary_label": summary_label,
+        "year_start_date": None,
+        "year_end_date": None,
+        "awaiting_first_sale": True,
+    }
+
+
+def yearly_revenue_report(business):
+    """Revenue per month for the current business year (12 months from first sale)."""
+    month_starts, period_start, period_end = _business_year_bounds(business)
+    if not month_starts:
+        return _empty_business_year_report(
+            "Yearly Revenue Report",
+            "Total Yearly Revenue",
+        )
+
+    start_dt = _aware_start_of_day(period_start)
     monthly_totals = {}
     for row in (
         Sale.objects.for_business(business)
@@ -355,7 +419,7 @@ def yearly_revenue_report(business):
         month_start = _as_date(row["month"])
         if month_start is not None:
             month_start = month_start.replace(day=1)
-            monthly_totals[month_start] = row["revenue"] or Decimal("0.00")
+            monthly_totals[month_start] = _quantize_money(row["revenue"])
 
     rows = []
     for month_start in month_starts:
@@ -373,6 +437,9 @@ def yearly_revenue_report(business):
         "total_revenue": total_revenue,
         "title": "Yearly Revenue Report",
         "summary_label": "Total Yearly Revenue",
+        "year_start_date": period_start,
+        "year_end_date": period_end,
+        "awaiting_first_sale": False,
     }
 
 
@@ -386,7 +453,13 @@ def period_revenue_report(business, period):
     return None
 
 
-def _period_start_day(period="daily"):
+def _period_start_day(business, period="daily"):
+    if period == "yearly":
+        month_starts, _, _ = _business_year_bounds(business)
+        if not month_starts:
+            return _local_today()
+        return month_starts[0]
+
     local_now = timezone.localtime(timezone.now())
     start_local = local_now.replace(hour=0, minute=0, second=0, microsecond=0)
     if period == "weekly":
@@ -397,13 +470,18 @@ def _period_start_day(period="daily"):
 
 
 def expenses_summary(business, period="daily"):
-    start_day = _period_start_day(period)
-    expenses = (
-        Expense.objects.for_business(business)
-        .filter(expense_date__gte=start_day)
-        .select_related("recorded_by")
+    if period == "yearly" and not business.year_start_date:
+        return Expense.objects.for_business(business).none(), Decimal("0.00")
+
+    start_day = _period_start_day(business, period)
+    expenses = Expense.objects.for_business(business).filter(
+        expense_date__gte=start_day
     )
-    total_expenses = expenses.aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
+    if period == "yearly":
+        _, _, period_end = _business_year_bounds(business)
+        expenses = expenses.filter(expense_date__lte=period_end)
+    expenses = expenses.select_related("recorded_by")
+    total_expenses = _quantize_money(expenses.aggregate(total=Sum("amount"))["total"])
     return expenses, total_expenses
 
 
@@ -413,14 +491,14 @@ def profit_summary(business, period="daily"):
     return {
         "revenue": total_revenue,
         "expenses": total_expenses,
-        "net_profit": total_revenue - total_expenses,
+        "net_profit": _quantize_money(total_revenue - total_expenses),
         "units": total_units,
     }
 
 
 def _expense_totals_by_day(business, start_day, end_day):
     return {
-        row["expense_date"]: row["total"] or Decimal("0.00")
+        row["expense_date"]: _quantize_money(row["total"])
         for row in (
             Expense.objects.for_business(business)
             .filter(expense_date__gte=start_day, expense_date__lte=end_day)
@@ -444,7 +522,7 @@ def weekly_profit_report(business):
             {
                 **row,
                 "expenses": expenses,
-                "net_profit": row["revenue"] - expenses,
+                "net_profit": _quantize_money(row["revenue"] - expenses),
             }
         )
     total_expenses = _decimal_sum(row["expenses"] for row in enriched_rows)
@@ -452,7 +530,7 @@ def weekly_profit_report(business):
         **revenue_report,
         "rows": enriched_rows,
         "total_expenses": total_expenses,
-        "net_profit": revenue_report["total_revenue"] - total_expenses,
+        "net_profit": _quantize_money(revenue_report["total_revenue"] - total_expenses),
     }
 
 
@@ -465,12 +543,12 @@ def monthly_profit_report(business):
     for row in (
         Expense.objects.for_business(business)
         .filter(expense_date__gte=start_day, expense_date__lte=today)
-        .annotate(week=TruncWeek("expense_date", tzinfo=timezone.get_current_timezone()))
+        .annotate(week=TruncWeek("expense_date"))
         .values("week")
         .annotate(total=Sum("amount"))
         .order_by("week")
     ):
-        weekly_expenses[_as_date(row["week"])] = row["total"] or Decimal("0.00")
+        weekly_expenses[_as_date(row["week"])] = _quantize_money(row["total"])
 
     enriched_rows = []
     week_start = start_day - timedelta(days=start_day.weekday())
@@ -480,7 +558,7 @@ def monthly_profit_report(business):
             {
                 **row,
                 "expenses": expenses,
-                "net_profit": row["revenue"] - expenses,
+                "net_profit": _quantize_money(row["revenue"] - expenses),
             }
         )
         week_start += timedelta(days=7)
@@ -490,35 +568,32 @@ def monthly_profit_report(business):
         **revenue_report,
         "rows": enriched_rows,
         "total_expenses": total_expenses,
-        "net_profit": revenue_report["total_revenue"] - total_expenses,
+        "net_profit": _quantize_money(revenue_report["total_revenue"] - total_expenses),
     }
 
 
 def yearly_profit_report(business):
     revenue_report = yearly_revenue_report(business)
-    today = _local_today()
-    month_cursor = today.replace(day=1)
-    month_starts = []
-    for _ in range(12):
-        month_starts.append(month_cursor)
-        if month_cursor.month == 1:
-            month_cursor = month_cursor.replace(year=month_cursor.year - 1, month=12)
-        else:
-            month_cursor = month_cursor.replace(month=month_cursor.month - 1)
-    month_starts.reverse()
+    month_starts, _, period_end = _business_year_bounds(business)
+    if not month_starts:
+        return {
+            **revenue_report,
+            "total_expenses": Decimal("0.00"),
+            "net_profit": Decimal("0.00"),
+        }
 
     monthly_expenses = {}
     for row in (
         Expense.objects.for_business(business)
-        .filter(expense_date__gte=month_starts[0], expense_date__lte=today)
-        .annotate(month=TruncMonth("expense_date", tzinfo=timezone.get_current_timezone()))
+        .filter(expense_date__gte=month_starts[0], expense_date__lte=period_end)
+        .annotate(month=TruncMonth("expense_date"))
         .values("month")
         .annotate(total=Sum("amount"))
         .order_by("month")
     ):
         month_start = _as_date(row["month"])
         if month_start is not None:
-            monthly_expenses[month_start.replace(day=1)] = row["total"] or Decimal("0.00")
+            monthly_expenses[month_start.replace(day=1)] = _quantize_money(row["total"])
 
     enriched_rows = []
     for month_start, row in zip(month_starts, revenue_report["rows"]):
@@ -527,7 +602,7 @@ def yearly_profit_report(business):
             {
                 **row,
                 "expenses": expenses,
-                "net_profit": row["revenue"] - expenses,
+                "net_profit": _quantize_money(row["revenue"] - expenses),
             }
         )
 
@@ -536,7 +611,7 @@ def yearly_profit_report(business):
         **revenue_report,
         "rows": enriched_rows,
         "total_expenses": total_expenses,
-        "net_profit": revenue_report["total_revenue"] - total_expenses,
+        "net_profit": _quantize_money(revenue_report["total_revenue"] - total_expenses),
     }
 
 

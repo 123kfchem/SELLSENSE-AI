@@ -30,14 +30,16 @@ from .forms import (
     SuperuserPasswordResetForm,
 )
 from .models import Business, Expense, Item, ItemReport, Sale, UserProfile
-from .pdf_reports import PDFGenerationError, build_daily_sales_pdf
+from .pdf_reports import PDFGenerationError, build_daily_sales_pdf, build_period_summary_pdf
 from .services import (
     ai_item_suggestions,
+    ensure_business_year_start,
     expenses_summary,
     ml_sales_analysis_table,
     period_profit_report,
     profit_summary,
     sales_summary,
+    _quantize_money,
 )
 from .tenancy import TenantAccessError, get_tenant_object, get_user_business, scoped_qs
 
@@ -353,6 +355,7 @@ def _record_sale_with_stock(business, item, quantity, user, payment_method, mpes
             mpesa_amount_sent=mpesa_amount_sent,
             total_amount=Decimal(quantity) * item.unit_price,
         )
+        ensure_business_year_start(business, sale.sold_at)
         return sale
 
 
@@ -463,6 +466,41 @@ def employer_dashboard(request):
     return render(request, "employer_dashboard.html", context)
 
 
+def _daily_pdf_context(business):
+    sales, total_revenue, total_units = sales_summary(business, "daily")
+    daily_expenses, total_expenses = expenses_summary(business, "daily")
+    daily_profit = profit_summary(business, "daily")
+    report_date = timezone.localtime(timezone.now()).date()
+    return {
+        "business_name": business.name,
+        "report_date": report_date,
+        "sales": sales.order_by("sold_at"),
+        "total_revenue": total_revenue,
+        "total_units": total_units,
+        "expenses": daily_expenses.order_by("-created_at"),
+        "total_expenses": total_expenses,
+        "net_profit": daily_profit["net_profit"],
+    }
+
+
+def _period_pdf_context(business, period):
+    profit_report = period_profit_report(business, period)
+    period_expenses, _ = expenses_summary(business, period)
+    return {
+        "business_name": business.name,
+        "report_date": timezone.localtime(timezone.now()).date(),
+        "revenue_report": profit_report,
+        "period_expenses": period_expenses.order_by("-expense_date", "-created_at"),
+        "business": business,
+    }
+
+
+def _pdf_download_response(pdf_bytes, filename):
+    response = HttpResponse(pdf_bytes, content_type="application/pdf")
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    return response
+
+
 @login_required
 def daily_sales_pdf(request):
     if not _can_access_role(request, UserProfile.ROLE_EMPLOYER):
@@ -471,28 +509,43 @@ def daily_sales_pdf(request):
     if business is None:
         return redirect("logout")
 
-    sales, total_revenue, total_units = sales_summary(business, "daily")
-    report_date = timezone.localtime(timezone.now()).date()
-
     try:
-        pdf_bytes = build_daily_sales_pdf(
-            {
-                "business_name": business.name,
-                "report_date": report_date,
-                "sales": sales.order_by("sold_at"),
-                "total_revenue": total_revenue,
-                "total_units": total_units,
-            }
-        )
+        pdf_bytes = build_daily_sales_pdf(_daily_pdf_context(business))
     except PDFGenerationError:
         messages.error(request, "Could not generate PDF. Please try again.")
         return redirect("employer-dashboard")
 
+    report_date = timezone.localtime(timezone.now()).date()
     business_slug = slugify(business.name) or "business"
     filename = f"daily-sales-{report_date}-{business_slug}.pdf"
-    response = HttpResponse(pdf_bytes, content_type="application/pdf")
-    response["Content-Disposition"] = f'attachment; filename="{filename}"'
-    return response
+    return _pdf_download_response(pdf_bytes, filename)
+
+
+@login_required
+def report_pdf(request, period):
+    if not _can_access_role(request, UserProfile.ROLE_EMPLOYER):
+        return redirect("role-select")
+    business = _require_tenant_business(request)
+    if business is None:
+        return redirect("logout")
+    if period not in {"daily", "weekly", "monthly", "yearly"}:
+        return redirect("reports", period="daily")
+
+    report_date = timezone.localtime(timezone.now()).date()
+    business_slug = slugify(business.name) or "business"
+
+    try:
+        if period == "daily":
+            pdf_bytes = build_daily_sales_pdf(_daily_pdf_context(business))
+            filename = f"daily-sales-{report_date}-{business_slug}.pdf"
+        else:
+            pdf_bytes = build_period_summary_pdf(period, _period_pdf_context(business, period))
+            filename = f"{period}-report-{report_date}-{business_slug}.pdf"
+    except PDFGenerationError:
+        messages.error(request, "Could not generate PDF. Please try again.")
+        return redirect("reports", period=period)
+
+    return _pdf_download_response(pdf_bytes, filename)
 
 
 @login_required
@@ -526,12 +579,15 @@ def reports_view(request, period):
         )
 
     profit_report = period_profit_report(business, period)
+    period_expenses, _ = expenses_summary(business, period)
     return render(
         request,
         "reports.html",
         {
             "period": period,
             "revenue_report": profit_report,
+            "period_expenses": period_expenses,
+            "business": business,
         },
     )
 
@@ -589,7 +645,9 @@ def employee_dashboard(request):
     )
     my_daily_sales = daily_sales.filter(sold_by=request.user)
     my_daily_units = my_daily_sales.aggregate(total=Sum("quantity"))["total"] or 0
-    my_daily_revenue = my_daily_sales.aggregate(total=Sum("total_amount"))["total"] or Decimal("0.00")
+    my_daily_revenue = _quantize_money(
+        my_daily_sales.aggregate(total=Sum("total_amount"))["total"]
+    )
     item_prices = {str(item.pk): str(item.unit_price) for item in active_items}
     item_stock = {
         str(item.pk): {

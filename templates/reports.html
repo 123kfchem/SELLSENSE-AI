@@ -5,11 +5,12 @@
         <h2 class="mb-0">
             {% if period == "daily" %}Daily Sales Report{% else %}{{ revenue_report.title }}{% endif %}
         </h2>
-        <div class="d-flex gap-2 flex-wrap">
+        <div class="d-flex gap-2 flex-wrap align-items-center">
             <a class="btn btn-outline-primary btn-sm{% if period == 'daily' %} active{% endif %}" href="{% url 'reports' 'daily' %}">Daily</a>
             <a class="btn btn-outline-primary btn-sm{% if period == 'weekly' %} active{% endif %}" href="{% url 'reports' 'weekly' %}">Weekly</a>
             <a class="btn btn-outline-primary btn-sm{% if period == 'monthly' %} active{% endif %}" href="{% url 'reports' 'monthly' %}">Monthly</a>
             <a class="btn btn-outline-primary btn-sm{% if period == 'yearly' %} active{% endif %}" href="{% url 'reports' 'yearly' %}">Yearly</a>
+            <a class="btn btn-primary btn-sm" href="{% url 'report-pdf' period %}">Download PDF</a>
         </div>
         </div>
 
@@ -65,7 +66,21 @@
             </div>
         </section>
     {% else %}
+        {% if period == "yearly" %}
+            {% if revenue_report.awaiting_first_sale %}
+            <p class="text-muted mb-3">Your business year starts when you record your first sale. Record a sale to begin your yearly report.</p>
+            {% else %}
+            <p class="text-muted mb-3">
+                Business year:
+                {{ revenue_report.year_start_date|date:"M j, Y" }}
+                &ndash;
+                {{ revenue_report.year_end_date|date:"M j, Y" }}
+                (based on your first sale on {{ business.year_start_date|date:"M j, Y" }}).
+            </p>
+            {% endif %}
+        {% else %}
         <p class="text-muted mb-3">Sales, expenses, and final amount summary for this period.</p>
+        {% endif %}
         <div class="table-responsive">
             <table class="table table-striped table-hover align-middle">
                 <thead>
@@ -102,6 +117,32 @@
                 </tfoot>
             </table>
         </div>
+        <section class="card mt-3">
+            <h3>
+                {% if period == "weekly" %}Expenses This Week
+                {% elif period == "monthly" %}Expenses This Month
+                {% else %}Expenses This Year{% endif %}
+            </h3>
+            <div class="table-responsive">
+                <table class="table table-striped table-hover align-middle">
+                    <thead>
+                        <tr><th>Amount</th><th>Reason</th><th>Date</th><th>Recorded By</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for expense in period_expenses %}
+                        <tr>
+                            <td>{{ expense.amount }}</td>
+                            <td>{{ expense.reason }}</td>
+                            <td>{{ expense.expense_date }}</td>
+                            <td>{{ expense.recorded_by.username|default:"N/A" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="4">No expenses in this period.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
     {% endif %}
 </section>
 

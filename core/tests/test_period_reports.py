@@ -6,7 +6,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from core.models import Business, Item, Sale, UserProfile
-from core.services import monthly_revenue_report, weekly_revenue_report, yearly_revenue_report
+from core.services import monthly_revenue_report, weekly_revenue_report, yearly_revenue_report, ensure_business_year_start, _current_business_year_start
 
 
 class PeriodRevenueReportTests(TestCase):
@@ -29,15 +29,19 @@ class PeriodRevenueReportTests(TestCase):
         )
 
     def _record_sale(self, amount, when=None):
-        Sale.objects.create(
+        sale = Sale.objects.create(
             business=self.business,
             item=self.item,
             quantity=1,
             sold_by=self.user,
             payment_method=Sale.PAYMENT_CASH,
             total_amount=amount,
-            sold_at=when or timezone.now(),
         )
+        if when is not None:
+            Sale.objects.filter(pk=sale.pk).update(sold_at=when)
+            sale.refresh_from_db()
+        ensure_business_year_start(self.business, sale.sold_at)
+        return sale
 
     def test_weekly_report_has_seven_days_and_total(self):
         self._record_sale(Decimal("50.00"))
