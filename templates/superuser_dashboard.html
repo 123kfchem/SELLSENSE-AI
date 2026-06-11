@@ -78,7 +78,9 @@
                                 {% if profile.is_business_active %}Deactivate{% else %}Activate{% endif %}
                             </button>
                         </form>
+                        {% ifchanged profile.business_id %}
                         {% include "partials/payment_notice_panel.html" %}
+                        {% endifchanged %}
                         <details class="password-reset-panel">
                             <summary class="btn btn-outline-primary btn-sm">Reset Passwords</summary>
                             <form method="post" class="password-reset-form">

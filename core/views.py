@@ -96,19 +96,11 @@ def superuser_dashboard(request):
             if form.is_valid():
                 role = form.cleaned_data["role"]
                 business_name = form.cleaned_data["business_name"].strip()
-                business, created = Business.objects.get_or_create(
+                business = Business.objects.create(
                     name=business_name,
-                    defaults={
-                        "phone_number": form.cleaned_data.get("phone_number", ""),
-                        "location": form.cleaned_data.get("location", ""),
-                    },
+                    phone_number=form.cleaned_data.get("phone_number", ""),
+                    location=form.cleaned_data.get("location", ""),
                 )
-                if not created:
-                    if form.cleaned_data.get("phone_number"):
-                        business.phone_number = form.cleaned_data["phone_number"]
-                    if form.cleaned_data.get("location"):
-                        business.location = form.cleaned_data["location"]
-                    business.save()
 
                 user = form.save(commit=False)
                 user.email = form.cleaned_data.get("email", "")
@@ -181,19 +173,16 @@ def superuser_dashboard(request):
                         messages.error(request, error)
             return redirect("superuser-dashboard")
         elif action == "send_payment_notice":
-            profile = get_object_or_404(
-                UserProfile.objects.select_related("business"),
-                pk=request.POST.get("profile_id"),
+            business = get_object_or_404(
+                Business,
+                pk=request.POST.get("business_id"),
             )
-            if not profile.business_id:
-                messages.error(request, "This account is not linked to a business.")
-                return redirect("superuser-dashboard")
-            notice_form = PaymentNoticeForm(request.POST, business=profile.business)
+            notice_form = PaymentNoticeForm(request.POST, business=business)
             if notice_form.is_valid():
                 notice_form.save()
                 messages.success(
                     request,
-                    f"Payment notice sent to {profile.business.name}. All users in this business will see it.",
+                    f"Payment notice sent to {business.name}. Only users in this business will see it.",
                 )
             else:
                 for field_errors in notice_form.errors.values():
@@ -201,30 +190,28 @@ def superuser_dashboard(request):
                         messages.error(request, error)
             return redirect("superuser-dashboard")
         elif action == "clear_payment_notice":
-            profile = get_object_or_404(
-                UserProfile.objects.select_related("business"),
-                pk=request.POST.get("profile_id"),
+            business = get_object_or_404(
+                Business,
+                pk=request.POST.get("business_id"),
             )
-            if profile.business_id:
-                business = profile.business
-                business.payment_status = Business.PAYMENT_OK
-                business.amount_due = None
-                business.due_date = None
-                business.payment_notice = ""
-                business.notice_sent_at = None
-                business.save(
-                    update_fields=[
-                        "payment_status",
-                        "amount_due",
-                        "due_date",
-                        "payment_notice",
-                        "notice_sent_at",
-                    ]
-                )
-                messages.success(
-                    request,
-                    f"Payment notice cleared for {business.name}.",
-                )
+            business.payment_status = Business.PAYMENT_OK
+            business.amount_due = None
+            business.due_date = None
+            business.payment_notice = ""
+            business.notice_sent_at = None
+            business.save(
+                update_fields=[
+                    "payment_status",
+                    "amount_due",
+                    "due_date",
+                    "payment_notice",
+                    "notice_sent_at",
+                ]
+            )
+            messages.success(
+                request,
+                f"Payment notice cleared for {business.name}.",
+            )
             return redirect("superuser-dashboard")
         form = BusinessRegistrationForm()
     else:

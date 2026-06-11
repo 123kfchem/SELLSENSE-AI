@@ -146,9 +146,15 @@
             </ul>
             <h4>Growth Items</h4>
             <ul>
-                {% for i in ai_data.growth_items %}
-                    <li>{{ i.name }} (+{{ i.growth_pct }}%)</li>
-                {% empty %}<li>No growth trends yet</li>{% endfor %}
+                {% if ai_data.growth_message %}
+                    <li>{{ ai_data.growth_message }}</li>
+                {% else %}
+                    {% for i in ai_data.growth_items %}
+                        <li>{{ i.name }} ({% if i.growth_pct > 0 %}+{% endif %}{{ i.growth_pct }}%)</li>
+                    {% empty %}
+                        <li>No growth trends in the current period.</li>
+                    {% endfor %}
+                {% endif %}
             </ul>
         </section>
     </div>

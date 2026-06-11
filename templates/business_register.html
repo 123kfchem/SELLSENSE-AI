@@ -56,7 +56,9 @@
                         {% endif %}
                     </td>
                     <td class="superuser-actions">
+                        {% ifchanged profile.business_id %}
                         {% include "partials/payment_notice_panel.html" %}
+                        {% endifchanged %}
                         <form method="post" class="inline">
                             {% csrf_token %}
                             <input type="hidden" name="action" value="toggle">

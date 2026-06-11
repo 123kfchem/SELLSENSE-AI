@@ -16,7 +16,7 @@
     <form method="post" class="payment-notice-form">
         {% csrf_token %}
         <input type="hidden" name="action" value="send_payment_notice">
-        <input type="hidden" name="profile_id" value="{{ profile.id }}">
+        <input type="hidden" name="business_id" value="{{ profile.business_id }}">
         <label class="form-label">Amount due (KES)</label>
         <input
             type="number"
@@ -49,7 +49,7 @@
     <form method="post" class="mt-2">
         {% csrf_token %}
         <input type="hidden" name="action" value="clear_payment_notice">
-        <input type="hidden" name="profile_id" value="{{ profile.id }}">
+        <input type="hidden" name="business_id" value="{{ profile.business_id }}">
         <button type="submit" class="btn btn-success btn-sm">Mark as Paid</button>
     </form>
     {% endif %}

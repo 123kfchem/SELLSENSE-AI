@@ -270,7 +270,7 @@ class PaymentNoticeForm(forms.Form):
     def save(self):
         from django.utils import timezone
 
-        business = self.business
+        business = Business.objects.get(pk=self.business.pk)
         business.amount_due = self.cleaned_data["amount_due"]
         business.due_date = self.cleaned_data["due_date"]
         business.payment_notice = self.cleaned_data["payment_notice"]

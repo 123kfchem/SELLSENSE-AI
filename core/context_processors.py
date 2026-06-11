@@ -3,16 +3,14 @@ def business_payment_notice(request):
     if not user or not user.is_authenticated or user.is_superuser:
         return {}
 
-    business = getattr(request, "business", None)
-    if business is None:
-        try:
-            profile = user.profile
-        except Exception:
-            return {}
-        if not profile.business_id:
-            return {}
-        business = profile.business
+    try:
+        profile = user.profile
+    except Exception:
+        return {}
+    if not profile.business_id:
+        return {}
 
+    business = profile.business
     if business.sync_payment_status():
         business.save(update_fields=["payment_status"])
 

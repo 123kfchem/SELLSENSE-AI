@@ -27,13 +27,12 @@ class PaymentNoticeTests(TestCase):
 
     def test_superuser_can_send_payment_notice(self):
         self.client.login(username="admin", password="adminpass123")
-        profile = self.user.profile
         due_date = (timezone.localdate() + timedelta(days=7)).isoformat()
         response = self.client.post(
             reverse("superuser-dashboard"),
             {
                 "action": "send_payment_notice",
-                "profile_id": profile.id,
+                "business_id": self.business.id,
                 "amount_due": "2500.00",
                 "due_date": due_date,
                 "payment_notice": "Pay via M-Pesa Paybill 123456.",
@@ -85,10 +84,48 @@ class PaymentNoticeTests(TestCase):
             reverse("superuser-dashboard"),
             {
                 "action": "clear_payment_notice",
-                "profile_id": self.user.profile.id,
+                "business_id": self.business.id,
             },
         )
         self.assertEqual(response.status_code, 302)
         self.business.refresh_from_db()
         self.assertEqual(self.business.payment_status, Business.PAYMENT_OK)
         self.assertIsNone(self.business.amount_due)
+
+    def test_payment_notice_only_affects_target_business(self):
+        other_business = Business.objects.create(name="Other Shop")
+        other_user = User.objects.create_user(username="other_owner", password="pass12345")
+        UserProfile.objects.filter(user=other_user).update(
+            business=other_business,
+            role=UserProfile.ROLE_EMPLOYER,
+            is_business_active=True,
+        )
+
+        self.client.login(username="admin", password="adminpass123")
+        due_date = (timezone.localdate() + timedelta(days=5)).isoformat()
+        response = self.client.post(
+            reverse("superuser-dashboard"),
+            {
+                "action": "send_payment_notice",
+                "business_id": self.business.id,
+                "amount_due": "999.00",
+                "due_date": due_date,
+                "payment_notice": "Only for Test Shop.",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        self.business.refresh_from_db()
+        other_business.refresh_from_db()
+        self.assertEqual(self.business.payment_status, Business.PAYMENT_DUE)
+        self.assertEqual(other_business.payment_status, Business.PAYMENT_OK)
+
+        self.client.logout()
+        self.client.login(username="shop_owner", password="pass12345")
+        owner_response = self.client.get(reverse("role-select"))
+        self.assertContains(owner_response, "Only for Test Shop")
+
+        self.client.logout()
+        self.client.login(username="other_owner", password="pass12345")
+        other_response = self.client.get(reverse("role-select"))
+        self.assertNotContains(other_response, "Only for Test Shop")
+        self.assertNotContains(other_response, "Payment required to continue using SellSense AI")

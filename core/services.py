@@ -36,47 +36,106 @@ def _as_date(value):
     return value
 
 
+def _take_tiers_from_sorted(rows, limit):
+    """Take full quantity tiers from an ordered list until the next tier would exceed limit."""
+    selected = []
+    index = 0
+    while index < len(rows):
+        tier_qty = rows[index]["total_qty"]
+        tier = [row for row in rows if row["total_qty"] == tier_qty]
+        if len(selected) + len(tier) <= limit:
+            selected.extend(tier)
+            index += len(tier)
+        else:
+            break
+    return selected
+
+
+def _split_top_and_least_selling(product_rows, top_limit=3):
+    """Partition sales rows into top and least lists with no overlap."""
+    sorted_desc = list(product_rows)
+    count = len(sorted_desc)
+    if count == 0:
+        return [], []
+
+    if count <= top_limit:
+        max_qty = sorted_desc[0]["total_qty"]
+        top_selling = [row for row in sorted_desc if row["total_qty"] == max_qty]
+        top_names = {row["name"] for row in top_selling}
+        least_selling = sorted(
+            (row for row in sorted_desc if row["name"] not in top_names),
+            key=lambda row: (row["total_qty"], row["name"]),
+        )
+        return top_selling, least_selling
+
+    top_selling = _take_tiers_from_sorted(sorted_desc, top_limit)
+    top_names = {row["name"] for row in top_selling}
+    remaining = sorted(
+        (row for row in sorted_desc if row["name"] not in top_names),
+        key=lambda row: (row["total_qty"], row["name"]),
+    )
+    least_selling = _take_tiers_from_sorted(remaining, top_limit)
+    return top_selling, least_selling
+
+
 def ai_item_suggestions(business):
-    base = (
+    product_rows = list(
         Sale.objects.for_business(business)
         .values(name=F("item__name"))
         .annotate(total_qty=Sum("quantity"), revenue=Sum("total_amount"))
-        .order_by("-total_qty")
+        .order_by("-total_qty", "name")
     )
-    top_selling = list(base[:3])
-    least_selling = list(base.order_by("total_qty")[:3])
+    top_selling, least_selling = _split_top_and_least_selling(product_rows)
 
     now = timezone.now()
     seven_days_ago = now - timedelta(days=7)
     fourteen_days_ago = now - timedelta(days=14)
 
     sales_qs = Sale.objects.for_business(business)
+    previous_period = sales_qs.filter(
+        sold_at__gte=fourteen_days_ago,
+        sold_at__lt=seven_days_ago,
+    )
+    if not previous_period.exists():
+        return {
+            "top_selling": top_selling,
+            "least_selling": least_selling,
+            "growth_items": [],
+            "growth_message": (
+                "Not enough historical sales data to calculate growth trends."
+            ),
+        }
+
     previous = {
-        x["item__name"]: x["qty"]
-        for x in sales_qs.filter(sold_at__gte=fourteen_days_ago, sold_at__lt=seven_days_ago)
+        row["item__name"]: row["qty"] or 0
+        for row in previous_period.values("item__name").annotate(qty=Sum("quantity"))
+    }
+    current = {
+        row["item__name"]: row["qty"] or 0
+        for row in sales_qs.filter(sold_at__gte=seven_days_ago)
         .values("item__name")
         .annotate(qty=Sum("quantity"))
     }
-    current = (
-        sales_qs.filter(sold_at__gte=seven_days_ago)
-        .values("item__name")
-        .annotate(qty=Sum("quantity"))
-    )
 
     growth_items = []
-    for row in current:
-        name = row["item__name"]
-        curr = row["qty"] or 0
-        prev = previous.get(name, 0)
-        if curr > prev and curr > 0:
-            pct = Decimal(100) if prev == 0 else ((curr - prev) / Decimal(prev)) * Decimal(100)
-            growth_items.append({"name": name, "growth_pct": round(pct, 2), "current_qty": curr})
-    growth_items.sort(key=lambda x: x["growth_pct"], reverse=True)
+    for name, prev in previous.items():
+        curr = current.get(name, 0)
+        pct = ((Decimal(curr) - Decimal(prev)) / Decimal(prev)) * Decimal(100)
+        growth_items.append(
+            {
+                "name": name,
+                "growth_pct": round(pct, 2),
+                "current_qty": curr,
+                "previous_qty": prev,
+            }
+        )
+    growth_items.sort(key=lambda row: row["growth_pct"], reverse=True)
 
     return {
         "top_selling": top_selling,
         "least_selling": least_selling,
         "growth_items": growth_items[:3],
+        "growth_message": None,
     }
 
 
