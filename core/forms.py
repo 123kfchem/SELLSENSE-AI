@@ -314,6 +314,11 @@ class ContactForm(forms.Form):
         label="Full Name",
         widget=forms.TextInput(attrs={"class": "form-control", "placeholder": "John Doe", "autocomplete": "name"}),
     )
+    phone_number = forms.CharField(
+        max_length=30,
+        label="Phone Number",
+        widget=forms.TextInput(attrs={"class": "form-control", "placeholder": "+254 700 000 000", "autocomplete": "tel"}),
+    )
     email = forms.EmailField(
         label="Email Address",
         widget=forms.EmailInput(attrs={"class": "form-control", "placeholder": "you@company.com", "autocomplete": "email"}),

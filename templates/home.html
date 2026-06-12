@@ -1,19 +1,19 @@
 {% extends "base.html" %}
 {% block content %}
-<section class="home-hero card mb-4">
-    <span class="home-hero__eyebrow">Smarter Retail Decisions</span>
-    <h1>Welcome to SellSense AI</h1>
-    <p class="lead">
+<section class="home-hero card mb-4 animate-fade animate-fade--hero">
+    <span class="home-hero__eyebrow animate-fade__item">Smarter Retail Decisions</span>
+    <h1 class="animate-fade__item">Welcome to SellSense AI</h1>
+    <p class="lead animate-fade__item">
         SellSense AI helps businesses track sales, manage inventory, and make confident decisions
         using real-time insights and practical AI recommendations.
     </p>
-    <div class="d-flex flex-wrap gap-2 justify-content-center">
+    <div class="d-flex flex-wrap gap-2 justify-content-center animate-fade__item">
         <a class="btn btn-primary btn-lg" href="{% url 'login' %}">Log in for Detailed Insights</a>
         {% if user.is_authenticated %}
             <a class="btn btn-outline-primary btn-lg" href="{% url 'role-select' %}">Go to Your Dashboard</a>
         {% endif %}
     </div>
-    <div class="ticker-wrap">
+    <div class="ticker-wrap animate-fade__item">
         <div class="ticker">
             <div class="ticker-item">Track daily sales and revenue in real time</div>
             <div class="ticker-item">Manage inventory with role-based dashboards</div>
@@ -34,7 +34,7 @@
             <div class="ticker-item">Get AI-powered sales and stock recommendations</div>
         </div>
     </div>
-    <div class="clock">
+    <div class="clock animate-fade__item">
 
         <span id="year"></span>
     
@@ -54,13 +54,422 @@
     
 
 
-<section id="about" class="card section-card mb-4">
+<section id="about" class="card section-card mb-4 scroll-fade">
     <h2 class="section-card__title">About SellSense AI</h2>
     <p class="mb-0">
         We provide a simple and reliable platform for business owners and staff to monitor daily operations,
         evaluate performance trends, and improve sales outcomes with less guesswork.
     </p>
+
 </section>
+<section class="py-5 bg-light scroll-fade" id="about-sellsense">
+    
+
+        <div class="text-center mb-5 scroll-fade">
+            <h2 class="fw-bold">SELLSENSE-AI</h2>
+            <p class="lead">
+                Professional Multi-Business Sales Management Platform
+            </p>
+        </div>
+
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+
+                <div class="card border-0 shadow-sm scroll-fade">
+                    <div class="card-body p-4 p-lg-5">
+
+                        <h3 class="fw-bold mb-3">Overview</h3>
+
+                        <p>
+                            SELLSENSE-AI is a secure Django-powered sales management system
+                            designed to support multiple businesses on a single platform
+                            while keeping every business's data completely isolated and protected.
+                        </p>
+
+                        <p>
+                            The platform helps businesses manage sales, inventory,
+                            employees, analytics, reports, and revenue tracking from
+                            one centralized dashboard.
+                        </p>
+
+                        <hr class="my-4">
+
+                        <h4 class="fw-bold mb-3">Key Features</h4>
+
+                        <div class="row g-4">
+
+                            <div class="col-md-6 scroll-fade">
+                                <div class="p-3 bg-light rounded">
+                                    <h5>🏢 Multi-Business Architecture</h5>
+                                    <ul>
+                                        <li>Multiple businesses on one platform</li>
+                                        <li>Business-level data isolation</li>
+                                        <li>Secure access controls</li>
+                                        <li>Cross-business protection</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6 scroll-fade">
+                                <div class="p-3 bg-light rounded">
+                                    <h5>🔐 Authentication & Security</h5>
+                                    <ul>
+                                        <li>Secure login system</li>
+                                        <li>Password hashing</li>
+                                        <li>Account activation/deactivation</li>
+                                        <li>Password reset management</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6 scroll-fade">
+                                <div class="p-3 bg-light rounded">
+                                    <h5>💰 Sales Management</h5>
+                                    <ul>
+                                        <li>Record daily sales</li>
+                                        <li>Track revenue</li>
+                                        <li>Manage products and prices</li>
+                                        <li>View sales history</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6 scroll-fade">
+                                <div class="p-3 bg-light rounded">
+                                    <h5>👥 Employee Management</h5>
+                                    <ul>
+                                        <li>Employer dashboard</li>
+                                        <li>Employee account management</li>
+                                        <li>Role-based permissions</li>
+                                        <li>Password reset functionality</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6 scroll-fade">
+                                <div class="p-3 bg-light rounded">
+                                    <h5>📊 Reports & Analytics</h5>
+                                    <ul>
+                                        <li>Daily, Weekly & Monthly reports</li>
+                                        <li>Revenue summaries</li>
+                                        <li>Revenue charts</li>
+                                        <li>Business statistics dashboard</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6 scroll-fade">
+                                <div class="p-3 bg-light rounded">
+                                    <h5>📄 PDF Generation</h5>
+                                    <ul>
+                                        <li>Download sales reports</li>
+                                        <li>Revenue summaries</li>
+                                        <li>Professional PDF exports</li>
+                                        <li>Printable business reports</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <hr class="my-4">
+
+                        <h4 class="fw-bold mb-3">Data Protection</h4>
+
+                        <ul>
+                            <li>Secure business-level data isolation</li>
+                            <li>Protected report storage</li>
+                            <li>Automatic deletion of reports older than one year</li>
+                            <li>Django-powered security architecture</li>
+                            <li>Scalable multi-tenant system design</li>
+                        </ul>
+
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+</section>
+
+<style>
+/* Page fade and scroll animations */
+.animate-fade {
+    animation: pageFadeIn 0.8s ease both;
+}
+
+.animate-fade__item {
+    opacity: 0;
+    animation: riseFadeIn 0.75s ease both;
+}
+
+.animate-fade__item:nth-child(1) {
+    animation-delay: 0.08s;
+}
+
+.animate-fade__item:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.animate-fade__item:nth-child(3) {
+    animation-delay: 0.32s;
+}
+
+.animate-fade__item:nth-child(4) {
+    animation-delay: 0.44s;
+}
+
+.animate-fade__item:nth-child(5) {
+    animation-delay: 0.56s;
+}
+
+.animate-fade--hero::before {
+    animation: softPulse 7s ease-in-out infinite;
+}
+
+.animate-fade--hero::after {
+    animation: softPulse 8s ease-in-out infinite reverse;
+}
+
+.scroll-fade {
+    opacity: 0;
+    transform: translateY(26px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+    will-change: opacity, transform;
+}
+
+.scroll-fade.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+#about-sellsense .scroll-fade:nth-child(1) {
+    transition-delay: 0.06s;
+}
+
+#about-sellsense .scroll-fade:nth-child(2) {
+    transition-delay: 0.12s;
+}
+
+#about-sellsense .col-md-6.scroll-fade:nth-child(odd) {
+    transition-delay: 0.08s;
+}
+
+#about-sellsense .col-md-6.scroll-fade:nth-child(even) {
+    transition-delay: 0.18s;
+}
+
+.offering {
+    animation: offeringFloat 5.5s ease-in-out infinite;
+}
+
+.carousel-item:nth-child(2) .offering {
+    animation-delay: 0.4s;
+}
+
+.carousel-item:nth-child(3) .offering {
+    animation-delay: 0.8s;
+}
+
+.carousel-item:nth-child(4) .offering {
+    animation-delay: 1.2s;
+}
+
+@keyframes pageFadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes riseFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(18px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes softPulse {
+    0%,
+    100% {
+        opacity: 0.65;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1.08);
+    }
+}
+
+@keyframes offeringFloat {
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-5px);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .animate-fade,
+    .animate-fade__item,
+    .animate-fade--hero::before,
+    .animate-fade--hero::after,
+    .offering {
+        animation: none;
+    }
+
+    .animate-fade__item,
+    .scroll-fade,
+    .scroll-fade.is-visible {
+        opacity: 1;
+        transform: none;
+        transition: none;
+    }
+}
+
+    /* SELLSENSE-AI SECTION */
+
+#about-sellsense{
+    position: relative;
+    overflow: hidden;
+    padding: 100px 0;
+    background: linear-gradient(
+        -45deg,
+        #0d6efd,
+        #0a58ca,
+        #1e3a8a,
+        #3b82f6
+    );
+    background-size: 400% 400%;
+    animation: gradientFlow 15s ease infinite;
+}
+
+/* Animated Floating Circles */
+#about-sellsense::before,
+#about-sellsense::after{
+    content: "";
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.08);
+    animation: float 12s infinite ease-in-out;
+}
+
+#about-sellsense::before{
+    width: 350px;
+    height: 350px;
+    top: -100px;
+    left: -100px;
+}
+
+#about-sellsense::after{
+    width: 250px;
+    height: 250px;
+    bottom: -80px;
+    right: -80px;
+    animation-delay: 3s;
+}
+
+/* Content */
+#about-sellsense .card{
+    border: none;
+    border-radius: 20px;
+    backdrop-filter: blur(10px);
+    background: rgba(255,255,255,0.95);
+    transition: all .4s ease;
+}
+
+#about-sellsense .card:hover{
+    transform: translateY(-8px);
+    box-shadow: 0 20px 50px rgba(0,0,0,0.15);
+}
+
+/* Feature Boxes */
+#about-sellsense .bg-light{
+    border-radius: 15px;
+    transition: all .3s ease;
+}
+
+#about-sellsense .bg-light:hover{
+    transform: translateY(-6px);
+    background: #ffffff !important;
+    box-shadow: 0 10px 25px rgba(13,110,253,.15);
+}
+
+/* Headings */
+#about-sellsense h2{
+    color: #ffffff;
+    font-weight: 800;
+    margin-bottom: 15px;
+}
+
+#about-sellsense .lead{
+    color: rgba(255,255,255,.9);
+}
+
+/* Feature Titles */
+#about-sellsense h5{
+    color: #0d6efd;
+    font-weight: 700;
+    margin-bottom: 15px;
+}
+
+/* Lists */
+#about-sellsense ul li{
+    margin-bottom: 8px;
+}
+
+/* Animated Gradient */
+@keyframes gradientFlow{
+    0%{
+        background-position: 0% 50%;
+    }
+    50%{
+        background-position: 100% 50%;
+    }
+    100%{
+        background-position: 0% 50%;
+    }
+}
+
+/* Floating Effect */
+@keyframes float{
+    0%{
+        transform: translateY(0px) rotate(0deg);
+    }
+    50%{
+        transform: translateY(30px) rotate(180deg);
+    }
+    100%{
+        transform: translateY(0px) rotate(360deg);
+    }
+}
+
+/* Responsive */
+@media (max-width:768px){
+
+    #about-sellsense{
+        padding: 70px 0;
+    }
+
+    #about-sellsense::before{
+        width: 200px;
+        height: 200px;
+    }
+
+    #about-sellsense::after{
+        width: 150px;
+        height: 150px;
+    }
+}
+</style>
 
 <section id="services" class="card section-card mb-4">
     <h2 class="section-card__title">Key Offerings</h2>
@@ -151,6 +560,61 @@ font-weight:600;
 }
 </style>
 <script>
+document.addEventListener(
+"DOMContentLoaded",
+function(){
+
+const fadeItems=document.querySelectorAll(
+".scroll-fade"
+);
+
+if(
+!"IntersectionObserver" in window
+){
+fadeItems.forEach(
+function(item){
+item.classList.add(
+"is-visible"
+);
+}
+);
+return;
+}
+
+const observer=new IntersectionObserver(
+function(entries){
+entries.forEach(
+function(entry){
+if(
+entry.isIntersecting
+){
+entry.target.classList.add(
+"is-visible"
+);
+observer.unobserve(
+entry.target
+);
+}
+}
+);
+},
+{
+threshold:0.16,
+rootMargin:"0px 0px -60px 0px"
+}
+);
+
+fadeItems.forEach(
+function(item){
+observer.observe(
+item
+);
+}
+);
+
+}
+);
+
     function updateClock(){
 
 const now=new Date();

@@ -1,10 +1,12 @@
 from decimal import Decimal
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.contrib.auth.views import LoginView
+from django.core.mail import EmailMessage
 from django.db import transaction
 from django.db.models import Count, F, Sum
 from django.db.models.functions import Coalesce
@@ -50,6 +52,39 @@ from .tenancy import (
 )
 
 
+def _send_contact_email(contact_form):
+    recipient = settings.CONTACT_EMAIL
+    if not recipient:
+        return False
+
+    data = contact_form.cleaned_data
+    company_name = data.get("company_name") or "Not provided"
+    subject = f"SellSense AI Contact: {data['subject']}"
+    body = "\n".join(
+        [
+            "New contact form submission from SellSense AI.",
+            "",
+            f"Full name: {data['full_name']}",
+            f"Phone number: {data['phone_number']}",
+            f"Email: {data['email']}",
+            f"Company name: {company_name}",
+            f"Subject: {data['subject']}",
+            "",
+            "Message:",
+            data["message"],
+        ]
+    )
+    email = EmailMessage(
+        subject=subject,
+        body=body,
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        to=[recipient],
+        reply_to=[data["email"]],
+    )
+    email.send(fail_silently=False)
+    return True
+
+
 class BusinessLoginView(LoginView):
     template_name = "login.html"
     authentication_form = BusinessAuthenticationForm
@@ -66,12 +101,28 @@ def home(request):
     if request.method == "POST" and request.POST.get("form_type") == "contact":
         contact_form = ContactForm(request.POST)
         if contact_form.is_valid():
-            messages.success(
+            try:
+                sent = _send_contact_email(contact_form)
+            except Exception:
+                sent = False
+            if sent:
+                messages.success(
+                    request,
+                    "Thank you for reaching out! Our team will respond to your inquiry shortly.",
+                )
+                return redirect(f"{reverse('home')}?contact_sent=1#contact")
+            messages.error(
                 request,
-                "Thank you for reaching out! Our team will respond to your inquiry shortly.",
+                "Your message could not be sent right now. Please try again later.",
             )
-            return redirect(f"{reverse('home')}#contact")
-    return render(request, "home.html", {"contact_form": contact_form})
+    return render(
+        request,
+        "home.html",
+        {
+            "contact_form": contact_form,
+            "contact_sent": request.GET.get("contact_sent") == "1",
+        },
+    )
 
 
 def business_logout(request):
