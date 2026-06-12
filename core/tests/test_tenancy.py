@@ -5,6 +5,8 @@ from django.test import Client, TestCase
 from django.urls import reverse
 
 from core.models import Business, Item, Sale, UserProfile
+from core.services import sales_summary
+from core.tenancy import TenantAccessError, assert_business_access
 
 
 class TenantIsolationTests(TestCase):
@@ -79,3 +81,31 @@ class TenantIsolationTests(TestCase):
         )
         self.assertEqual(Sale.objects.for_business(self.business_a).count(), 1)
         self.assertEqual(Sale.objects.for_business(self.business_b).count(), 0)
+
+    def test_assert_business_access_denies_cross_tenant(self):
+        with self.assertRaises(TenantAccessError):
+            assert_business_access(self.user_a, self.business_b)
+
+    def test_services_resolve_business_from_authenticated_user(self):
+        Sale.objects.create(
+            business=self.business_a,
+            item=self.item_a,
+            quantity=1,
+            sold_by=self.user_a,
+            payment_method=Sale.PAYMENT_CASH,
+            total_amount=Decimal("100.00"),
+        )
+        Sale.objects.create(
+            business=self.business_b,
+            item=Item.objects.for_business(self.business_b).get(),
+            quantity=2,
+            sold_by=self.user_b,
+            payment_method=Sale.PAYMENT_CASH,
+            total_amount=Decimal("100.00"),
+        )
+        _, revenue_a, units_a = sales_summary(self.user_a, "daily")
+        _, revenue_b, units_b = sales_summary(self.user_b, "daily")
+        self.assertEqual(units_a, 1)
+        self.assertEqual(revenue_a, Decimal("100.00"))
+        self.assertEqual(units_b, 2)
+        self.assertEqual(revenue_b, Decimal("100.00"))

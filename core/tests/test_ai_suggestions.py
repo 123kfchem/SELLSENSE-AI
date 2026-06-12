@@ -112,7 +112,7 @@ class AiItemSuggestionsTests(TestCase):
         self._record_sale(self.trousers, 1, now)
         self._record_sale(self.iphone, 1, now)
 
-        data = ai_item_suggestions(self.business)
+        data = ai_item_suggestions(self.user)
 
         self.assertEqual([row["name"] for row in data["top_selling"]], ["Samsung A56"])
         self.assertEqual(
@@ -131,7 +131,7 @@ class AiItemSuggestionsTests(TestCase):
             for _ in range(qty):
                 self._record_sale(item, 1, now)
 
-        data = ai_item_suggestions(self.business)
+        data = ai_item_suggestions(self.user)
         top_names = {row["name"] for row in data["top_selling"]}
         least_names = {row["name"] for row in data["least_selling"]}
         self.assertFalse(top_names & least_names)
@@ -146,7 +146,7 @@ class AiItemSuggestionsTests(TestCase):
             self._record_sale(self.samsung, 1, current_start)
         self._record_sale(self.trousers, 1, current_start)
 
-        data = ai_item_suggestions(self.business)
+        data = ai_item_suggestions(self.user)
         growth_by_name = {row["name"]: row for row in data["growth_items"]}
 
         self.assertIsNone(data["growth_message"])
@@ -161,5 +161,5 @@ class AiItemSuggestionsTests(TestCase):
         self._record_sale(self.samsung, 2, previous_time)
         self._record_sale(self.samsung, 2, period_time)
 
-        data = ai_item_suggestions(self.business)
+        data = ai_item_suggestions(self.user)
         self.assertEqual(data["growth_items"][0]["growth_pct"], 0.0)

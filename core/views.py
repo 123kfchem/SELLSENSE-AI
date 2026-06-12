@@ -41,7 +41,13 @@ from .services import (
     sales_summary,
     _quantize_money,
 )
-from .tenancy import TenantAccessError, get_tenant_object, get_user_business, scoped_qs
+from .tenancy import (
+    TenantAccessError,
+    assert_business_access,
+    get_tenant_object,
+    get_user_business,
+    scoped_qs,
+)
 
 
 class BusinessLoginView(LoginView):
@@ -334,6 +340,9 @@ def _dashboard_switch_context(request):
 
 
 def _record_sale_with_stock(business, item, quantity, user, payment_method, mpesa_amount_sent):
+    assert_business_access(user, business)
+    if item.business_id != business.pk:
+        raise TenantAccessError("Item does not belong to your business.")
     with transaction.atomic():
         rows_updated = (
             Item.objects.for_business(business)
@@ -355,7 +364,7 @@ def _record_sale_with_stock(business, item, quantity, user, payment_method, mpes
             mpesa_amount_sent=mpesa_amount_sent,
             total_amount=Decimal(quantity) * item.unit_price,
         )
-        ensure_business_year_start(business, sale.sold_at)
+        ensure_business_year_start(user, sale.sold_at)
         return sale
 
 
@@ -388,10 +397,10 @@ def employer_dashboard(request):
     item_form = ItemForm()
     sale_form = SaleForm(business=business)
     report_form = ItemReportForm()
-    ai_data = ai_item_suggestions(business)
-    ml_analysis_rows = ml_sales_analysis_table(business, "weekly")
-    daily_sales, daily_revenue, daily_units = sales_summary(business, "daily")
-    daily_profit = profit_summary(business, "daily")
+    ai_data = ai_item_suggestions(request.user)
+    ml_analysis_rows = ml_sales_analysis_table(request.user, "weekly")
+    daily_sales, daily_revenue, daily_units = sales_summary(request.user, "daily")
+    daily_profit = profit_summary(request.user, "daily")
     expenses = scoped_qs(Expense, request.user).order_by("-expense_date", "-created_at")
 
     if request.method == "POST":
@@ -466,10 +475,11 @@ def employer_dashboard(request):
     return render(request, "employer_dashboard.html", context)
 
 
-def _daily_pdf_context(business):
-    sales, total_revenue, total_units = sales_summary(business, "daily")
-    daily_expenses, total_expenses = expenses_summary(business, "daily")
-    daily_profit = profit_summary(business, "daily")
+def _daily_pdf_context(user):
+    business = get_user_business(user)
+    sales, total_revenue, total_units = sales_summary(user, "daily")
+    daily_expenses, total_expenses = expenses_summary(user, "daily")
+    daily_profit = profit_summary(user, "daily")
     report_date = timezone.localtime(timezone.now()).date()
     return {
         "business_name": business.name,
@@ -483,9 +493,10 @@ def _daily_pdf_context(business):
     }
 
 
-def _period_pdf_context(business, period):
-    profit_report = period_profit_report(business, period)
-    period_expenses, _ = expenses_summary(business, period)
+def _period_pdf_context(user, period):
+    business = get_user_business(user)
+    profit_report = period_profit_report(user, period)
+    period_expenses, _ = expenses_summary(user, period)
     return {
         "business_name": business.name,
         "report_date": timezone.localtime(timezone.now()).date(),
@@ -510,7 +521,7 @@ def daily_sales_pdf(request):
         return redirect("logout")
 
     try:
-        pdf_bytes = build_daily_sales_pdf(_daily_pdf_context(business))
+        pdf_bytes = build_daily_sales_pdf(_daily_pdf_context(request.user))
     except PDFGenerationError:
         messages.error(request, "Could not generate PDF. Please try again.")
         return redirect("employer-dashboard")
@@ -536,10 +547,12 @@ def report_pdf(request, period):
 
     try:
         if period == "daily":
-            pdf_bytes = build_daily_sales_pdf(_daily_pdf_context(business))
+            pdf_bytes = build_daily_sales_pdf(_daily_pdf_context(request.user))
             filename = f"daily-sales-{report_date}-{business_slug}.pdf"
         else:
-            pdf_bytes = build_period_summary_pdf(period, _period_pdf_context(business, period))
+            pdf_bytes = build_period_summary_pdf(
+                period, _period_pdf_context(request.user, period)
+            )
             filename = f"{period}-report-{report_date}-{business_slug}.pdf"
     except PDFGenerationError:
         messages.error(request, "Could not generate PDF. Please try again.")
@@ -559,10 +572,10 @@ def reports_view(request, period):
         period = "daily"
 
     if period == "daily":
-        sales, revenue, units = sales_summary(business, period)
-        daily_profit = profit_summary(business, period)
-        daily_expenses, _ = expenses_summary(business, period)
-        ml_analysis_rows = ml_sales_analysis_table(business, period)
+        sales, revenue, units = sales_summary(request.user, period)
+        daily_profit = profit_summary(request.user, period)
+        daily_expenses, _ = expenses_summary(request.user, period)
+        ml_analysis_rows = ml_sales_analysis_table(request.user, period)
         return render(
             request,
             "reports.html",
@@ -578,8 +591,8 @@ def reports_view(request, period):
             },
         )
 
-    profit_report = period_profit_report(business, period)
-    period_expenses, _ = expenses_summary(business, period)
+    profit_report = period_profit_report(request.user, period)
+    period_expenses, _ = expenses_summary(request.user, period)
     return render(
         request,
         "reports.html",
@@ -635,8 +648,8 @@ def employee_dashboard(request):
                 messages.success(request, "Sale processed successfully.")
                 return redirect("employee-dashboard")
 
-    daily_sales, daily_revenue, daily_units = sales_summary(business, "daily")
-    daily_profit = profit_summary(business, "daily")
+    daily_sales, daily_revenue, daily_units = sales_summary(request.user, "daily")
+    daily_profit = profit_summary(request.user, "daily")
     today = timezone.localdate()
     my_daily_expenses = (
         scoped_qs(Expense, request.user)

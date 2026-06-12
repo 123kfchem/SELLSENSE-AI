@@ -56,7 +56,7 @@ class PeriodReportPDFTests(TestCase):
             total_amount=Decimal("100.00"),
             sold_at=timezone.now(),
         )
-        ensure_business_year_start(self.business, sale.sold_at)
+        ensure_business_year_start(self.employer, sale.sold_at)
 
         Expense.objects.create(
             business=self.business,

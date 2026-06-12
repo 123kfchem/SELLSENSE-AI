@@ -46,11 +46,11 @@ class BusinessYearReportTests(TestCase):
         if when is not None:
             Sale.objects.filter(pk=sale.pk).update(sold_at=when)
             sale.refresh_from_db()
-        ensure_business_year_start(self.business, sale.sold_at)
+        ensure_business_year_start(self.user, sale.sold_at)
         return sale
 
     def test_yearly_report_empty_before_first_sale(self):
-        report = yearly_revenue_report(self.business)
+        report = yearly_revenue_report(self.user)
         self.assertTrue(report["awaiting_first_sale"])
         self.assertEqual(report["rows"], [])
         self.assertEqual(report["total_revenue"], Decimal("0.00"))
@@ -69,7 +69,7 @@ class BusinessYearReportTests(TestCase):
             month=3, day=15, hour=10, minute=0, second=0, microsecond=0
         )
         self._record_sale(Decimal("250.00"), when=first_sale_at)
-        report = yearly_revenue_report(self.business)
+        report = yearly_revenue_report(self.user)
         self.assertFalse(report["awaiting_first_sale"])
         self.assertEqual(len(report["rows"]), 12)
         self.assertEqual(report["rows"][0]["label"], first_sale_at.strftime("%B %Y"))
@@ -81,7 +81,7 @@ class BusinessYearReportTests(TestCase):
         anchor = today - timedelta(days=400)
         self.business.year_start_date = anchor
         self.business.save(update_fields=["year_start_date"])
-        report = yearly_revenue_report(self.business)
+        report = yearly_revenue_report(self.user)
         expected_start = _current_business_year_start(anchor, today)
         self.assertEqual(report["year_start_date"], expected_start)
 
@@ -103,6 +103,6 @@ class BusinessYearReportTests(TestCase):
 
     def test_yearly_profit_report_respects_business_year_window(self):
         self._record_sale(Decimal("1000.00"))
-        report = yearly_profit_report(self.business)
+        report = yearly_profit_report(self.user)
         self.assertEqual(len(report["rows"]), 12)
         self.assertEqual(report["total_revenue"], Decimal("1000.00"))

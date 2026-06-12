@@ -8,6 +8,19 @@ from django.db.models.functions import TruncDate, TruncMonth, TruncWeek
 from django.utils import timezone
 
 from .models import Business, Expense, Sale
+from .tenancy import get_user_business
+
+VALID_PERIODS = frozenset({"daily", "weekly", "monthly", "yearly"})
+
+
+def _tenant_business(user):
+    return get_user_business(user)
+
+
+def _normalize_period(period):
+    if period not in VALID_PERIODS:
+        raise ValueError(f"Invalid period: {period!r}")
+    return period
 
 
 def _local_now():
@@ -90,7 +103,8 @@ def _split_top_and_least_selling(product_rows, top_limit=3):
     return top_selling, least_selling
 
 
-def ai_item_suggestions(business):
+def ai_item_suggestions(user):
+    business = _tenant_business(user)
     product_rows = list(
         Sale.objects.for_business(business)
         .values(name=F("item__name"))
@@ -151,7 +165,9 @@ def ai_item_suggestions(business):
     }
 
 
-def sales_summary(business, period="daily"):
+def sales_summary(user, period="daily"):
+    business = _tenant_business(user)
+    period = _normalize_period(period)
     now = timezone.now()
     local_now = timezone.localtime(now)
     start_local = local_now.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -170,7 +186,9 @@ def sales_summary(business, period="daily"):
     return sales, total_revenue, total_units
 
 
-def ml_sales_analysis_table(business, period="daily"):
+def ml_sales_analysis_table(user, period="daily"):
+    business = _tenant_business(user)
+    period = _normalize_period(period)
     now = timezone.now()
     local_now = timezone.localtime(now)
     start_local = local_now.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -266,8 +284,9 @@ def ml_sales_analysis_table(business, period="daily"):
     return rows
 
 
-def weekly_revenue_report(business):
+def weekly_revenue_report(user):
     """Revenue per day for the last 7 days (including today)."""
+    business = _tenant_business(user)
     today = _local_today()
     start_day = today - timedelta(days=6)
     start_dt = _aware_start_of_day(start_day)
@@ -302,8 +321,9 @@ def weekly_revenue_report(business):
     }
 
 
-def monthly_revenue_report(business):
+def monthly_revenue_report(user):
     """Revenue per calendar week for the last 30 days."""
+    business = _tenant_business(user)
     today = _local_today()
     start_day = today - timedelta(days=29)
     start_dt = _aware_start_of_day(start_day)
@@ -371,7 +391,8 @@ def _business_year_bounds(business):
     return month_starts, period_start, _business_year_end(period_start)
 
 
-def ensure_business_year_start(business, sale_datetime):
+def ensure_business_year_start(user, sale_datetime):
+    business = _tenant_business(user)
     if business.year_start_date:
         return business.year_start_date
 
@@ -397,8 +418,9 @@ def _empty_business_year_report(title, summary_label):
     }
 
 
-def yearly_revenue_report(business):
+def yearly_revenue_report(user):
     """Revenue per month for the current business year (12 months from first sale)."""
+    business = _tenant_business(user)
     month_starts, period_start, period_end = _business_year_bounds(business)
     if not month_starts:
         return _empty_business_year_report(
@@ -443,13 +465,14 @@ def yearly_revenue_report(business):
     }
 
 
-def period_revenue_report(business, period):
+def period_revenue_report(user, period):
+    period = _normalize_period(period)
     if period == "weekly":
-        return weekly_revenue_report(business)
+        return weekly_revenue_report(user)
     if period == "monthly":
-        return monthly_revenue_report(business)
+        return monthly_revenue_report(user)
     if period == "yearly":
-        return yearly_revenue_report(business)
+        return yearly_revenue_report(user)
     return None
 
 
@@ -469,7 +492,9 @@ def _period_start_day(business, period="daily"):
     return start_local.date()
 
 
-def expenses_summary(business, period="daily"):
+def expenses_summary(user, period="daily"):
+    business = _tenant_business(user)
+    period = _normalize_period(period)
     if period == "yearly" and not business.year_start_date:
         return Expense.objects.for_business(business).none(), Decimal("0.00")
 
@@ -485,9 +510,9 @@ def expenses_summary(business, period="daily"):
     return expenses, total_expenses
 
 
-def profit_summary(business, period="daily"):
-    _, total_revenue, total_units = sales_summary(business, period)
-    _, total_expenses = expenses_summary(business, period)
+def profit_summary(user, period="daily"):
+    _, total_revenue, total_units = sales_summary(user, period)
+    _, total_expenses = expenses_summary(user, period)
     return {
         "revenue": total_revenue,
         "expenses": total_expenses,
@@ -508,8 +533,9 @@ def _expense_totals_by_day(business, start_day, end_day):
     }
 
 
-def weekly_profit_report(business):
-    revenue_report = weekly_revenue_report(business)
+def weekly_profit_report(user):
+    business = _tenant_business(user)
+    revenue_report = weekly_revenue_report(user)
     today = _local_today()
     start_day = today - timedelta(days=6)
     daily_expenses = _expense_totals_by_day(business, start_day, today)
@@ -534,8 +560,9 @@ def weekly_profit_report(business):
     }
 
 
-def monthly_profit_report(business):
-    revenue_report = monthly_revenue_report(business)
+def monthly_profit_report(user):
+    business = _tenant_business(user)
+    revenue_report = monthly_revenue_report(user)
     today = _local_today()
     start_day = today - timedelta(days=29)
 
@@ -572,8 +599,9 @@ def monthly_profit_report(business):
     }
 
 
-def yearly_profit_report(business):
-    revenue_report = yearly_revenue_report(business)
+def yearly_profit_report(user):
+    business = _tenant_business(user)
+    revenue_report = yearly_revenue_report(user)
     month_starts, _, period_end = _business_year_bounds(business)
     if not month_starts:
         return {
@@ -615,11 +643,12 @@ def yearly_profit_report(business):
     }
 
 
-def period_profit_report(business, period):
+def period_profit_report(user, period):
+    period = _normalize_period(period)
     if period == "weekly":
-        return weekly_profit_report(business)
+        return weekly_profit_report(user)
     if period == "monthly":
-        return monthly_profit_report(business)
+        return monthly_profit_report(user)
     if period == "yearly":
-        return yearly_profit_report(business)
+        return yearly_profit_report(user)
     return None

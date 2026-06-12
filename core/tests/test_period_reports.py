@@ -40,20 +40,20 @@ class PeriodRevenueReportTests(TestCase):
         if when is not None:
             Sale.objects.filter(pk=sale.pk).update(sold_at=when)
             sale.refresh_from_db()
-        ensure_business_year_start(self.business, sale.sold_at)
+        ensure_business_year_start(self.user, sale.sold_at)
         return sale
 
     def test_weekly_report_has_seven_days_and_total(self):
         self._record_sale(Decimal("50.00"))
-        report = weekly_revenue_report(self.business)
+        report = weekly_revenue_report(self.user)
         self.assertEqual(len(report["rows"]), 7)
         self.assertEqual(report["total_revenue"], Decimal("50.00"))
         self.assertNotIn("item", report["rows"][0])
 
     def test_monthly_and_yearly_reports_aggregate_revenue(self):
         self._record_sale(Decimal("120.00"))
-        monthly = monthly_revenue_report(self.business)
-        yearly = yearly_revenue_report(self.business)
+        monthly = monthly_revenue_report(self.user)
+        yearly = yearly_revenue_report(self.user)
         self.assertGreaterEqual(len(monthly["rows"]), 1)
         self.assertEqual(len(yearly["rows"]), 12)
         self.assertEqual(monthly["total_revenue"], Decimal("120.00"))

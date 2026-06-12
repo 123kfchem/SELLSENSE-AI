@@ -54,7 +54,7 @@ class ExpenseReportTests(TestCase):
         if when is not None:
             Sale.objects.filter(pk=sale.pk).update(sold_at=when)
             sale.refresh_from_db()
-        ensure_business_year_start(self.business, sale.sold_at)
+        ensure_business_year_start(self.employer, sale.sold_at)
         return sale
 
     def _record_expense(self, amount, reason="Supplies", recorded_by=None, expense_date=None):
@@ -69,7 +69,7 @@ class ExpenseReportTests(TestCase):
     def test_profit_summary_subtracts_expenses_from_revenue(self):
         self._record_sale(Decimal("500.00"))
         self._record_expense(Decimal("120.00"))
-        summary = profit_summary(self.business, "daily")
+        summary = profit_summary(self.employer, "daily")
         self.assertEqual(summary["revenue"], Decimal("500.00"))
         self.assertEqual(summary["expenses"], Decimal("120.00"))
         self.assertEqual(summary["net_profit"], Decimal("380.00"))
@@ -77,7 +77,7 @@ class ExpenseReportTests(TestCase):
     def test_weekly_profit_report_includes_expense_totals(self):
         self._record_sale(Decimal("200.00"))
         self._record_expense(Decimal("50.00"))
-        report = weekly_profit_report(self.business)
+        report = weekly_profit_report(self.employer)
         self.assertEqual(report["total_expenses"], Decimal("50.00"))
         self.assertEqual(report["net_profit"], Decimal("150.00"))
         self.assertIn("expenses", report["rows"][0])
@@ -92,7 +92,7 @@ class ExpenseReportTests(TestCase):
         self._record_sale(Decimal("1.00"), when=first_sale_at)
         self._record_expense(Decimal("30.00"), expense_date=old_month)
         self._record_expense(Decimal("10.00"))
-        expenses, total = expenses_summary(self.business, "yearly")
+        expenses, total = expenses_summary(self.employer, "yearly")
         self.assertEqual(total, Decimal("40.00"))
         self.assertEqual(expenses.count(), 2)
 
@@ -166,6 +166,6 @@ class ExpenseReportTests(TestCase):
     def test_yearly_profit_report_aggregates_expenses(self):
         self._record_sale(Decimal("1000.00"))
         self._record_expense(Decimal("200.00"))
-        report = yearly_profit_report(self.business)
+        report = yearly_profit_report(self.employer)
         self.assertEqual(report["total_expenses"], Decimal("200.00"))
         self.assertEqual(report["net_profit"], Decimal("800.00"))

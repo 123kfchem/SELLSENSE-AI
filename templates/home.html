@@ -23,9 +23,36 @@
             <div class="ticker-item">Manage inventory with role-based dashboards</div>
             <div class="ticker-item">Generate weekly, monthly, and yearly reports</div>
             <div class="ticker-item">Get AI-powered sales and stock recommendations</div>
+        
+            <div class="ticker-item">Track daily sales and revenue in real time</div>
+            <div class="ticker-item">Manage inventory with role-based dashboards</div>
+            <div class="ticker-item">Generate weekly, monthly, and yearly reports</div>
+            <div class="ticker-item">Get AI-powered sales and stock recommendations</div>
+            <div class="ticker-item">Track daily sales and revenue in real time</div>
+            <div class="ticker-item">Manage inventory with role-based dashboards</div>
+            <div class="ticker-item">Generate weekly, monthly, and yearly reports</div>
+            <div class="ticker-item">Get AI-powered sales and stock recommendations</div>
         </div>
     </div>
+    <div class="clock">
+
+        <span id="year"></span>
+    
+        <span id="month"></span>
+    
+        <span id="date"></span>
+    
+        <span id="day"></span>
+    
+        <span id="time"></span>
+    
+    </div>
 </section>
+
+    
+
+    
+
 
 <section id="about" class="card section-card mb-4">
     <h2 class="section-card__title">About SellSense AI</h2>
@@ -86,6 +113,107 @@
         </button>
     </div>
 </section>
+<style>
+    .clock{
+
+display:flex;
+
+justify-content:center;
+
+align-items:center;
+
+gap:8px;
+
+
+
+width: 50%;
+
+padding:15px;
+
+}
+
+.clock span{
+
+background:lightblue;
+
+padding:10px 18px;
+
+border-radius:12px;
+
+font-size:clamp(
+    14px,
+    2vw,
+    20px
+);
+
+font-weight:600;
+
+}
+</style>
+<script>
+    function updateClock(){
+
+const now=new Date();
+
+const days=[
+"Sunday",
+"Monday",
+"Tuesday",
+"Wednesday",
+"Thursday",
+"Friday",
+"Saturday"
+];
+
+const months=[
+"January",
+"February",
+"March",
+"April",
+"May",
+"June",
+"July",
+"August",
+"September",
+"October",
+"November",
+"December"
+];
+
+document.getElementById(
+"year"
+).innerHTML=
+now.getFullYear();
+
+document.getElementById(
+"month"
+).innerHTML=
+months[now.getMonth()];
+
+document.getElementById(
+"date"
+).innerHTML=
+now.getDate();
+
+document.getElementById(
+"day"
+).innerHTML=
+days[now.getDay()];
+
+document.getElementById(
+"time"
+).innerHTML=
+now.toLocaleTimeString();
+
+}
+
+setInterval(
+updateClock,
+1000
+);
+
+updateClock();
+</script>
 
 {% include "partials/contact_section.html" %}
 {% endblock %}

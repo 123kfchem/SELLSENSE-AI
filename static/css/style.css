@@ -348,33 +348,43 @@ main.container {
     font-weight: 600;
 }
 
-.ticker {
-    display: flex;
-    white-space: nowrap;
-    padding-left: 100%;
-    animation: ticker-move 22s linear infinite;
+.ticker-wrap{
+    overflow:hidden;
+    width:100%;
 }
 
-.ticker-item {
-    display: inline-block;
-    padding: 0 2rem;
+.ticker{
+    display:flex;
+    white-space:nowrap;
+    width:max-content;
+    animation:ticker-move 29s linear infinite;
 }
 
-.ticker-item::before {
-    content: "●";
-    color: var(--color-success);
-    margin-right: 0.6rem;
-    font-size: 0.55rem;
-    vertical-align: middle;
+.ticker-item{
+    flex-shrink:0;
+    padding:0 2rem;
 }
 
-@keyframes ticker-move {
-    0% { transform: translate3d(0, 0, 0); }
-    100% { transform: translate3d(-100%, 0, 0); }
+.ticker-item::before{
+    content:"●";
+    color:var(--color-success);
+    margin-right:0.6rem;
+    font-size:0.55rem;
+    vertical-align:middle;
 }
 
-.ticker-wrap:hover .ticker {
-    animation-play-state: paused;
+@keyframes ticker-move{
+    from{
+        transform:translateX(0);
+    }
+
+    to{
+        transform:translateX(-50%);
+    }
+}
+
+.ticker-wrap:hover .ticker{
+    animation-play-state:paused;
 }
 
 /* ── Offerings ── */
