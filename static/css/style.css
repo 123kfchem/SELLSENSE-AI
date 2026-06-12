@@ -664,6 +664,7 @@ th, td {
     border-radius: var(--radius-sm);
     border: none;
     font-weight: 500;
+    background-color: lightblue;
 }
 
 .alert-success {
@@ -817,6 +818,8 @@ th, td {
 
 .payment-notice-panel {
     margin-top: 8px;
+    background-color: lightblue;
+    border-radius: 12px;
 }
 
 .payment-notice-panel summary {
@@ -834,7 +837,7 @@ th, td {
     padding: 10px;
     border: 1px solid var(--color-border);
     border-radius: var(--radius-sm);
-    background: var(--color-bg);
+    background-color: white;
     display: grid;
     gap: 6px;
     min-width: 220px;
