@@ -1,4 +1,5 @@
 django>=5.0
 mysqlclient>=2.2
+Pillow>=10.0
 python-dotenv>=1.0
 xhtml2pdf>=0.2.16

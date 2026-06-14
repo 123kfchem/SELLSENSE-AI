@@ -1,0 +1,23 @@
+{
+  "name": "SellSense AI",
+  "short_name": "SellSense",
+  "description": "SellSense AI business and sales management platform.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#2563EB",
+  "theme_color": "#2563EB",
+  "icons": [
+    {
+      "src": "/static/img/logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/static/img/logo2.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

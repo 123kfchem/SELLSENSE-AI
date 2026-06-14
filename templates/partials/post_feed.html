@@ -1,0 +1,37 @@
+{% for post in posts %}
+<article class="fb-post card shadow-sm mb-3">
+    <div class="fb-post__header d-flex align-items-center p-3 pb-2">
+        <div class="fb-post__avatar rounded-circle bg-primary text-white d-flex align-items-center justify-content-center flex-shrink-0">
+            {% if post.author %}
+                {{ post.author.first_name|default:post.author.username|slice:":1"|upper }}
+            {% else %}
+                S
+            {% endif %}
+        </div>
+        <div class="ms-3 min-w-0">
+            <strong class="fb-post__author">
+                {% if post.author %}
+                    {{ post.author.get_full_name|default:post.author.username }}
+                {% else %}
+                    SellSense AI
+                {% endif %}
+            </strong>
+            <div class="text-muted small">{{ post.created_at|timesince }} ago</div>
+        </div>
+    </div>
+
+    <div class="fb-post__body px-3 pb-3">
+        {{ post.content|linebreaksbr }}
+    </div>
+
+    {% if post.image %}
+        <img src="{{ post.image.url }}" alt="" class="fb-post__image w-100" loading="lazy">
+    {% endif %}
+
+    <div class="fb-post__footer px-3 py-2 border-top text-muted small">
+        SellSense AI · Public update
+    </div>
+</article>
+{% empty %}
+<p class="text-center text-muted mb-0">No updates yet. Check back soon.</p>
+{% endfor %}

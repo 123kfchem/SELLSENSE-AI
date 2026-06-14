@@ -255,3 +255,23 @@ class Expense(TenantModel):
 
     def __str__(self):
         return f"{self.amount} on {self.expense_date}"
+
+
+class Post(models.Model):
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="posts",
+    )
+    content = models.TextField()
+    image = models.ImageField(upload_to="posts/", blank=True, null=True)
+    is_published = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return self.content[:60]

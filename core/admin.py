@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Business, Expense, Item, ItemReport, Sale, UserProfile
+from .models import Business, Expense, Item, ItemReport, Post, Sale, UserProfile
 
 
 class TenantAdminMixin:
@@ -53,3 +53,10 @@ class ItemReportAdmin(TenantAdminMixin, admin.ModelAdmin):
 @admin.register(Expense)
 class ExpenseAdmin(TenantAdminMixin, admin.ModelAdmin):
     list_display = ("amount", "business", "reason", "expense_date", "recorded_by", "created_at")
+
+
+@admin.register(Post)
+class PostAdmin(admin.ModelAdmin):
+    list_display = ("content", "author", "is_published", "created_at")
+    list_filter = ("is_published",)
+    search_fields = ("content",)

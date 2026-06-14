@@ -1,4 +1,5 @@
 from decimal import Decimal
+from pathlib import Path
 
 from django.conf import settings
 from django.contrib import messages
@@ -27,11 +28,12 @@ from .forms import (
     ItemForm,
     ItemReportForm,
     PaymentNoticeForm,
+    PostForm,
     RoleSelectionForm,
     SaleForm,
     SuperuserPasswordResetForm,
 )
-from .models import Business, Expense, Item, ItemReport, Sale, UserProfile
+from .models import Business, Expense, Item, ItemReport, Post, Sale, UserProfile
 from .pdf_reports import PDFGenerationError, build_daily_sales_pdf, build_period_summary_pdf
 from .services import (
     ai_item_suggestions,
@@ -121,8 +123,17 @@ def home(request):
         {
             "contact_form": contact_form,
             "contact_sent": request.GET.get("contact_sent") == "1",
+            "posts": Post.objects.filter(is_published=True).select_related("author")[:20],
         },
     )
+
+
+def service_worker(request):
+    sw_path = Path(settings.BASE_DIR) / "static" / "sw.js"
+    try:
+        return HttpResponse(sw_path.read_text(encoding="utf-8"), content_type="application/javascript")
+    except FileNotFoundError:
+        return HttpResponse("/* Service worker not found */", content_type="application/javascript", status=404)
 
 
 def business_logout(request):
@@ -150,6 +161,9 @@ def superuser_dashboard(request):
         .exclude(role__exact="")
         .order_by("-user__date_joined")
     )
+
+    form = BusinessRegistrationForm()
+    post_form = PostForm()
 
     if request.method == "POST":
         action = request.POST.get("action", "create")
@@ -275,10 +289,34 @@ def superuser_dashboard(request):
                 f"Payment notice cleared for {business.name}.",
             )
             return redirect("superuser-dashboard")
-        form = BusinessRegistrationForm()
-    else:
-        form = BusinessRegistrationForm()
-    return render(request, "superuser_dashboard.html", {"form": form, "businesses": businesses})
+        elif action == "create_post":
+            post_form = PostForm(request.POST, request.FILES)
+            if post_form.is_valid():
+                post = post_form.save(commit=False)
+                post.author = request.user
+                post.save()
+                messages.success(request, "Post published on the homepage.")
+                return redirect("superuser-dashboard")
+            for field_errors in post_form.errors.values():
+                for error in field_errors:
+                    messages.error(request, error)
+        elif action == "delete_post":
+            post = get_object_or_404(Post, pk=request.POST.get("post_id"))
+            post.delete()
+            messages.success(request, "Post deleted.")
+            return redirect("superuser-dashboard")
+
+    posts = Post.objects.select_related("author").all()
+    return render(
+        request,
+        "superuser_dashboard.html",
+        {
+            "form": form,
+            "post_form": post_form,
+            "posts": posts,
+            "businesses": businesses,
+        },
+    )
 
 
 @receiver(post_save, sender=User)

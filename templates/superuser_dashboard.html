@@ -11,6 +11,48 @@
     </form>
 </section>
 
+<section class="card mt-4">
+    <h3 class="mb-3">Homepage Posts</h3>
+    <p class="text-muted mb-3">Create updates that appear on the public homepage in a social feed layout.</p>
+    <form method="post" enctype="multipart/form-data" class="post-create-form">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="create_post">
+        {{ post_form.as_p }}
+        <button type="submit" class="btn btn-primary">Publish Post</button>
+    </form>
+
+    <hr class="my-4">
+
+    <h4 class="h5 mb-3">Recent Posts</h4>
+    {% for post in posts %}
+        <div class="post-admin-preview border rounded p-3 mb-3">
+            <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                <div>
+                    <strong>{{ post.author.get_full_name|default:post.author.username|default:"Admin" }}</strong>
+                    <div class="text-muted small">{{ post.created_at|date:"M j, Y g:i A" }}</div>
+                </div>
+                {% if post.is_published %}
+                    <span class="badge text-bg-success">Published</span>
+                {% else %}
+                    <span class="badge text-bg-secondary">Draft</span>
+                {% endif %}
+            </div>
+            <p class="mb-2">{{ post.content|truncatewords:40 }}</p>
+            {% if post.image %}
+                <img src="{{ post.image.url }}" alt="" class="post-admin-preview__image rounded mb-2">
+            {% endif %}
+            <form method="post" class="d-inline">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="delete_post">
+                <input type="hidden" name="post_id" value="{{ post.id }}">
+                <button type="submit" class="btn btn-outline-danger btn-sm">Delete</button>
+            </form>
+        </div>
+    {% empty %}
+        <p class="text-muted mb-0">No posts yet.</p>
+    {% endfor %}
+</section>
+
 <section class="card">
     <h3 class="mb-3">Registered Business Overview</h3>
     <div class="row g-3 mb-3">

@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 
-from .models import Business, Expense, Item, ItemReport, Sale, UserProfile
+from .models import Business, Expense, Item, ItemReport, Post, Sale, UserProfile
 
 
 class BusinessAuthenticationForm(AuthenticationForm):
@@ -306,6 +306,28 @@ class PaymentNoticeForm(forms.Form):
             ]
         )
         return business
+
+
+class PostForm(forms.ModelForm):
+    class Meta:
+        model = Post
+        fields = ["content", "image", "is_published"]
+        widgets = {
+            "content": forms.Textarea(
+                attrs={
+                    "rows": 4,
+                    "placeholder": "What's on your mind?",
+                    "class": "form-control",
+                }
+            ),
+            "image": forms.FileInput(attrs={"class": "form-control", "accept": "image/*"}),
+            "is_published": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+        }
+        labels = {
+            "content": "Post content",
+            "image": "Photo (optional)",
+            "is_published": "Publish on homepage",
+        }
 
 
 class ContactForm(forms.Form):
