@@ -55,13 +55,16 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "sellsense_ai.wsgi.application"
-
-from decouple import config
+import os
 import dj_database_url
+from decouple import config
 
-if config("DATABASE_URL", default=None):
+if os.getenv("DATABASE_URL"):
     DATABASES = {
-        "default": dj_database_url.parse(config("DATABASE_URL"))
+        "default": dj_database_url.config(
+            default=os.getenv("DATABASE_URL"),
+            conn_max_age=600
+        )
     }
 else:
     DATABASES = {
