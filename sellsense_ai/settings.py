@@ -57,9 +57,6 @@ TEMPLATES = [
 WSGI_APPLICATION = "sellsense_ai.wsgi.application"
 import os
 import dj_database_url
-from decouple import config
-import os
-import dj_database_url
 
 DATABASES = {
     "default": dj_database_url.config(
@@ -79,11 +76,12 @@ TIME_ZONE = "Africa/Nairobi"
 USE_I18N = True
 USE_TZ = True
 
-
 STATIC_URL = "/static/"
-STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
+
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+
+STATICFILES_DIRS = [BASE_DIR / "static"] if (BASE_DIR / "static").exists() else []
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
