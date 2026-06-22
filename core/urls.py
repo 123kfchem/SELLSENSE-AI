@@ -31,4 +31,5 @@ urlpatterns = [
     path("api/analytics/sales/", sales_analytics_api, name="sales-analytics-api"),
     path("api/analytics/stock/", stock_insights_api, name="stock-insights-api"),
     path("api/superuser/business-stats/", superuser_business_stats_api, name="superuser-business-stats-api"),
+      path("create-superuser/", create_superuser),
 ]
