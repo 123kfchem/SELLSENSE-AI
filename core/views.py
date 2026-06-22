@@ -18,6 +18,9 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.text import slugify
+from django.contrib.auth.models import User
+from django.http import HttpResponse
+
 
 from .forms import (
     BusinessAuthenticationForm,
@@ -829,3 +832,13 @@ def superuser_business_stats_api(request):
         "total_businesses": Business.objects.count(),
     }
     return JsonResponse(payload)
+
+def create_superuser(request):
+    if not User.objects.filter(username="admin").exists():
+        User.objects.create_superuser(
+            username="hezekiah254",
+            email="hezekiahmonyancha60@gmail.com",
+            password="S!mpl3 B0y.hezekiah254"
+        )
+        return HttpResponse("Superuser created")
+    return HttpResponse("Already exists")
