@@ -3,7 +3,7 @@ import calendar
 from datetime import datetime, timedelta
 from decimal import Decimal
 
-from django.db.models import F, Sum
+from django.db.models import F, Max, Sum
 from django.db.models.functions import TruncDate, TruncMonth, TruncWeek
 from django.utils import timezone
 
@@ -103,65 +103,169 @@ def _split_top_and_least_selling(product_rows, top_limit=3):
     return top_selling, least_selling
 
 
+AI_PERIOD_LABELS = {
+    "today": "Today",
+    "this_week": "This Week",
+    "this_month": "This Month",
+    "all_time": "All Time",
+}
+
+
+def _start_of_local_day(dt):
+    local = timezone.localtime(dt)
+    return local.replace(hour=0, minute=0, second=0, microsecond=0)
+
+
+def _normalize_ai_period(period):
+    if period not in AI_PERIOD_LABELS:
+        return "all_time"
+    return period
+
+
+def _period_start(period):
+    now = timezone.now()
+    if period == "today":
+        return _start_of_local_day(now)
+    if period == "this_week":
+        return _start_of_local_day(now) - timedelta(days=7)
+    if period == "this_month":
+        return _start_of_local_day(now) - timedelta(days=30)
+    return None
+
+
+def _top_selling_explanation(row, total_units):
+    percent = row["percent_share"]
+    stock = row["current_stock"]
+    if stock == 0:
+        return (
+            f"This item has sold well in the selected period but is currently out of stock. "
+            "Replenish before demand drops."
+        )
+    if percent >= 40:
+        return (
+            f"This product is a clear customer favorite, contributing {percent}% of total sales "
+            "during the selected period."
+        )
+    if stock <= 3:
+        return (
+            f"High demand combined with only {stock} units left means this product is moving quickly."
+        )
+    return (
+        f"This item is selling consistently and remains one of your strongest performers "
+        f"with {stock} units currently available."
+    )
+
+
+def _top_selling_recommendation(row):
+    stock = row["current_stock"]
+    total_qty = row["total_qty"]
+    if stock == 0:
+        return "Reorder immediately to avoid a stockout for this best seller."
+    if stock <= max(3, total_qty // 2):
+        return "Consider replenishing stock soon to keep momentum going."
+    if stock <= 10:
+        return "Stock is healthy, but keep an eye on demand so you can reorder before running low."
+    return "Current inventory is strong for this item."
+
+
+def _least_selling_recommendation(row):
+    stock = row["remaining_stock"]
+    last_sale = row["last_sale_date"]
+    suggestions = []
+    if row["units_sold"] == 0:
+        suggestions.append("Offer a promotion to introduce this product to customers.")
+        suggestions.append("Bundle it with a top seller to increase visibility.")
+        if stock > 5:
+            suggestions.append("Reduce inventory or move excess stock to a clearance display.")
+        return suggestions
+
+    if last_sale is None:
+        suggestions.append("No recorded sale yet; try promotions or bundling.")
+    elif last_sale <= _start_of_local_day(timezone.now()).date() - timedelta(days=14):
+        suggestions.append("Last sale occurred more than two weeks ago; consider a promotion.")
+        suggestions.append("Review pricing and product placement to improve demand.")
+    else:
+        suggestions.append("Consider bundling this item with popular products.")
+
+    if stock > row["units_sold"] * 2:
+        suggestions.append("Reduce inventory levels to avoid tying up cash in slow-moving stock.")
+    return suggestions
+
+
 def ai_item_suggestions(user):
     business = _tenant_business(user)
+    period_start = _start_of_local_day(timezone.now())
+    sales_qs = Sale.objects.for_business(business).filter(sold_at__gte=period_start)
+
     product_rows = list(
-        Sale.objects.for_business(business)
-        .values(name=F("item__name"))
-        .annotate(total_qty=Sum("quantity"), revenue=Sum("total_amount"))
-        .order_by("-total_qty", "name")
+        sales_qs.values(
+            item__id=F("item__id"),
+            item__name=F("item__name"),
+            item__current_quantity=F("item__current_quantity"),
+            item__stock_qty=F("item__stock_qty"),
+        )
+        .annotate(
+            total_qty=Sum("quantity"),
+            total_revenue=Sum("total_amount"),
+            last_sold=Max("sold_at"),
+        )
+        .order_by("-total_qty", "item__name")
     )
-    top_selling, least_selling = _split_top_and_least_selling(product_rows)
+    for row in product_rows:
+        row["name"] = row["item__name"]
 
-    now = timezone.now()
-    seven_days_ago = now - timedelta(days=7)
-    fourteen_days_ago = now - timedelta(days=14)
+    total_units = sum(row["total_qty"] for row in product_rows) or 0
+    top_rows, least_rows = _split_top_and_least_selling(product_rows)
 
-    sales_qs = Sale.objects.for_business(business)
-    previous_period = sales_qs.filter(
-        sold_at__gte=fourteen_days_ago,
-        sold_at__lt=seven_days_ago,
-    )
-    if not previous_period.exists():
-        return {
-            "top_selling": top_selling,
-            "least_selling": least_selling,
-            "growth_items": [],
-            "growth_message": (
-                "Not enough historical sales data to calculate growth trends."
-            ),
-        }
-
-    previous = {
-        row["item__name"]: row["qty"] or 0
-        for row in previous_period.values("item__name").annotate(qty=Sum("quantity"))
-    }
-    current = {
-        row["item__name"]: row["qty"] or 0
-        for row in sales_qs.filter(sold_at__gte=seven_days_ago)
-        .values("item__name")
-        .annotate(qty=Sum("quantity"))
-    }
-
-    growth_items = []
-    for name, prev in previous.items():
-        curr = current.get(name, 0)
-        pct = ((Decimal(curr) - Decimal(prev)) / Decimal(prev)) * Decimal(100)
-        growth_items.append(
+    top_selling = []
+    for row in top_rows:
+        percent = round((Decimal(row["total_qty"]) / Decimal(total_units)) * Decimal(100), 1) if total_units else 0
+        top_selling.append(
             {
-                "name": name,
-                "growth_pct": round(pct, 2),
-                "current_qty": curr,
-                "previous_qty": prev,
+                "name": row["item__name"],
+                "total_qty": row["total_qty"],
+                "units_sold": row["total_qty"],
+                "percent_share": percent,
+                "current_stock": row["item__current_quantity"],
+                "stock_qty": row["item__stock_qty"],
+                "explanation": _top_selling_explanation(
+                    {"percent_share": percent, "current_stock": row["item__current_quantity"], "total_qty": row["total_qty"]}, total_units
+                ),
+                "recommendation": _top_selling_recommendation(
+                    {"current_stock": row["item__current_quantity"], "total_qty": row["total_qty"]}
+                ),
             }
         )
-    growth_items.sort(key=lambda row: row["growth_pct"], reverse=True)
+
+    least_selling = []
+    for row in least_rows:
+        last_sold = row["last_sold"]
+        least_selling.append(
+            {
+                "name": row["item__name"],
+                "total_qty": row["total_qty"],
+                "units_sold": row["total_qty"],
+                "last_sale_date": _as_date(last_sold),
+                "remaining_stock": row["item__current_quantity"],
+                "suggestions": _least_selling_recommendation(
+                    {
+                        "units_sold": row["total_qty"],
+                        "remaining_stock": row["item__current_quantity"],
+                        "last_sale_date": _as_date(last_sold),
+                    }
+                ),
+            }
+        )
+
+    growth_items = []
+    growth_message = "Daily analysis focuses on today's performance. Growth trends require historical comparison across multiple days."
 
     return {
+        "has_sales": bool(product_rows),
         "top_selling": top_selling,
         "least_selling": least_selling,
-        "growth_items": growth_items[:3],
-        "growth_message": None,
+        "growth_items": growth_items,
+        "growth_message": growth_message,
     }
 
 

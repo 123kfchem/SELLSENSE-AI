@@ -29,7 +29,6 @@ from .forms import (
     ContactForm,
     ExpenseForm,
     ItemForm,
-    ItemReportForm,
     PaymentNoticeForm,
     PostForm,
     RoleSelectionForm,
@@ -488,7 +487,6 @@ def employer_dashboard(request):
     ).order_by("name")
     item_form = ItemForm()
     sale_form = SaleForm(business=business)
-    report_form = ItemReportForm()
     ai_data = ai_item_suggestions(request.user)
     ml_analysis_rows = ml_sales_analysis_table(request.user, "weekly")
     daily_sales, daily_revenue, daily_units = sales_summary(request.user, "daily")
@@ -504,10 +502,40 @@ def employer_dashboard(request):
                 item = item_form.save(commit=False)
                 item.business = business
                 item.created_by = request.user
-                item.current_quantity = item.initial_quantity
-                item.stock_qty = item.initial_quantity
-                item.save()
-                messages.success(request, "Item added successfully.")
+                item.name = item.name.strip()
+
+                existing_item = Item.objects.for_business(business).filter(
+                    name__iexact=item.name
+                ).first()
+
+                if existing_item is None:
+                    item.current_quantity = item.initial_quantity
+                    item.stock_qty = item.initial_quantity
+                    item.save()
+                    messages.success(request, "Item added successfully.")
+                else:
+                    added_quantity = item.initial_quantity
+                    update_fields = {
+                        "unit_price": item.unit_price,
+                    }
+                    if item.category:
+                        update_fields["category"] = item.category
+
+                    if added_quantity:
+                        update_fields.update(
+                            {
+                                "current_quantity": F("current_quantity") + added_quantity,
+                                "initial_quantity": F("initial_quantity") + added_quantity,
+                                "stock_qty": F("stock_qty") + added_quantity,
+                            }
+                        )
+
+                    with transaction.atomic():
+                        Item.objects.for_business(business).filter(pk=existing_item.pk).update(
+                            **update_fields
+                        )
+                    messages.success(request, "Existing item stock increased successfully.")
+
                 return redirect("employer-dashboard")
 
         elif action == "record_sale":
@@ -528,24 +556,26 @@ def employer_dashboard(request):
                 messages.success(request, "Sale recorded successfully.")
                 return redirect("employer-dashboard")
 
-        elif action in {"delete_item", "cancel_item"}:
+        elif action == "update_item_price":
             item = get_tenant_object(Item, request.user, pk=request.POST.get("item_id"))
-            item.status = Item.STATUS_DELETED if action == "delete_item" else Item.STATUS_CANCELLED
+            try:
+                new_price = Decimal(request.POST.get("price"))
+                if new_price < 0:
+                    messages.error(request, "Price cannot be negative.")
+                    return redirect("employer-dashboard")
+                item.unit_price = new_price
+                item.save(update_fields=["unit_price"])
+                messages.success(request, f"Price for {item.name} updated to {new_price}.")
+            except (ValueError, TypeError):
+                messages.error(request, "Invalid price format.")
+            return redirect("employer-dashboard")
+
+        elif action == "delete_item":
+            item = get_tenant_object(Item, request.user, pk=request.POST.get("item_id"))
+            item.status = Item.STATUS_DELETED
             item.save(update_fields=["status"])
             messages.info(request, f"Item {item.name} marked as {item.status}.")
             return redirect("employer-dashboard")
-
-        elif action == "report_item":
-            item = get_tenant_object(Item, request.user, pk=request.POST.get("item_id"))
-            report_form = ItemReportForm(request.POST)
-            if report_form.is_valid():
-                report = report_form.save(commit=False)
-                report.business = business
-                report.item = item
-                report.reported_by = request.user
-                report.save()
-                messages.success(request, f"Report submitted for {item.name}.")
-                return redirect("employer-dashboard")
 
     stock_insights = _stock_insights_queryset(business)
     context = {
@@ -553,7 +583,6 @@ def employer_dashboard(request):
         "items": items,
         "item_form": item_form,
         "sale_form": sale_form,
-        "report_form": report_form,
         "ai_data": ai_data,
         "ml_analysis_rows": ml_analysis_rows,
         "daily_sales": daily_sales,

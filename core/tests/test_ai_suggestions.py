@@ -120,10 +120,19 @@ class AiItemSuggestionsTests(TestCase):
             ["IPHONE PROMAX 17", "Trousers"],
         )
         self.assertEqual(data["growth_items"], [])
-        self.assertEqual(
-            data["growth_message"],
-            "Not enough historical sales data to calculate growth trends.",
-        )
+        self.assertIn("Daily analysis", data["growth_message"])
+
+    def test_ai_item_suggestions_return_actionable_recommendations(self):
+        now = timezone.now()
+        self._record_sale(self.samsung, 3, now)
+        self._record_sale(self.trousers, 1, now)
+
+        data = ai_item_suggestions(self.user)
+
+        self.assertTrue(data["has_sales"])
+        self.assertTrue(data["top_selling"][0]["recommendation"])
+        self.assertIsInstance(data["least_selling"][0]["suggestions"], list)
+        self.assertGreaterEqual(len(data["least_selling"][0]["suggestions"]), 1)
 
     def test_top_and_least_never_overlap(self):
         now = timezone.now()
@@ -147,11 +156,9 @@ class AiItemSuggestionsTests(TestCase):
         self._record_sale(self.trousers, 1, current_start)
 
         data = ai_item_suggestions(self.user)
-        growth_by_name = {row["name"]: row for row in data["growth_items"]}
 
-        self.assertIsNone(data["growth_message"])
-        self.assertEqual(growth_by_name["Samsung A56"]["growth_pct"], 100.0)
-        self.assertNotIn("Trousers", growth_by_name)
+        self.assertEqual(data["growth_items"], [])
+        self.assertIn("Daily analysis", data["growth_message"])
 
     def test_unchanged_sales_show_zero_growth(self):
         now = timezone.now()
@@ -162,4 +169,5 @@ class AiItemSuggestionsTests(TestCase):
         self._record_sale(self.samsung, 2, period_time)
 
         data = ai_item_suggestions(self.user)
-        self.assertEqual(data["growth_items"][0]["growth_pct"], 0.0)
+        self.assertEqual(data["growth_items"], [])
+        self.assertIn("Daily analysis", data["growth_message"])

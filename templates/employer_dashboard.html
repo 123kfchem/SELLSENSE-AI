@@ -56,20 +56,15 @@
                         <td>{{ item.status }}</td>
                         <td>
                             <form method="post" class="inline">{% csrf_token %}
-                                <input type="hidden" name="action" value="cancel_item">
+                                <input type="hidden" name="action" value="update_item_price">
                                 <input type="hidden" name="item_id" value="{{ item.id }}">
-                                <button type="submit" class="btn btn-outline-warning btn-sm">Cancel</button>
+                                <input type="number" class="form-control form-control-sm" name="price" placeholder="New price" step="0.01" required>
+                                <button type="submit" class="btn btn-outline-info btn-sm">Update Price</button>
                             </form>
                             <form method="post" class="inline">{% csrf_token %}
                                 <input type="hidden" name="action" value="delete_item">
                                 <input type="hidden" name="item_id" value="{{ item.id }}">
                                 <button type="submit" class="btn btn-outline-danger btn-sm">Delete</button>
-                            </form>
-                            <form method="post" class="inline">{% csrf_token %}
-                                <input type="hidden" name="action" value="report_item">
-                                <input type="hidden" name="item_id" value="{{ item.id }}">
-                                <input type="text" class="form-control form-control-sm" name="note" placeholder="Report note" required>
-                                <button type="submit" class="btn btn-outline-primary btn-sm">Report</button>
                             </form>
                         </td>
                     </tr>
@@ -131,32 +126,86 @@
     </div>
 
     <div id="tab-ai" class="tab-panel">
-        <section class="card">
-            <h3>AI Suggestions</h3>
-            <h4>Top Selling</h4>
-            <ul>
-                {% for i in ai_data.top_selling %}
-                    <li>{{ i.name }} ({{ i.total_qty }} sold)</li>
-                {% empty %}<li>No data yet</li>{% endfor %}
-            </ul>
-            <h4>Least Selling</h4>
-            <ul>
-                {% for i in ai_data.least_selling %}
-                    <li>{{ i.name }} ({{ i.total_qty }} sold)</li>
-                {% empty %}<li>No data yet</li>{% endfor %}
-            </ul>
-            <h4>Growth Items</h4>
-            <ul>
+        <section class="card p-3">
+            <div class="mb-3">
+                <h3 class="mb-1">AI Business Assistant</h3>
+                <p class="text-muted mb-0">Actionable recommendations based on today's sales, inventory levels, and customer demand.</p>
+            </div>
+
+            <div class="row gy-4">
+                <div class="col-lg-6">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h4 class="card-title">Top Selling Products</h4>
+                            {% if ai_data.top_selling %}
+                                {% for item in ai_data.top_selling %}
+                                    <div class="mb-3 border-bottom pb-3">
+                                        <h5 class="mb-1">{{ item.name }}</h5>
+                                        <p class="mb-1">
+                                            <strong>{{ item.units_sold }}</strong> units sold ·
+                                            <strong>{{ item.percent_share }}%</strong> of sales ·
+                                            <strong>{{ item.current_stock }}</strong> in stock
+                                        </p>
+                                        <p class="mb-1"><strong>Why this matters:</strong> {{ item.explanation }}</p>
+                                        <p class="mb-0"><strong>Recommended action:</strong> {{ item.recommendation }}</p>
+                                    </div>
+                                {% endfor %}
+                            {% elif ai_data.has_sales %}
+                                <p>Sales exist for this period, but the assistant needs more product movement to determine clear top performers.</p>
+                            {% else %}
+                                <p>No sales recorded yet. Start selling products to unlock AI-driven restocking and pricing guidance.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-6">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h4 class="card-title">Least Selling Products</h4>
+                            {% if ai_data.least_selling %}
+                                {% for item in ai_data.least_selling %}
+                                    <div class="mb-3 border-bottom pb-3">
+                                        <h5 class="mb-1">{{ item.name }}</h5>
+                                        <p class="mb-1">
+                                            <strong>{{ item.units_sold }}</strong> units sold ·
+                                            Last sale: <strong>{% if item.last_sale_date %}{{ item.last_sale_date|date:"Y-m-d" }}{% else %}never{% endif %}</strong> ·
+                                            Remaining stock: <strong>{{ item.remaining_stock }}</strong>
+                                        </p>
+                                        <p class="mb-1"><strong>Suggested actions:</strong></p>
+                                        <ul class="mb-0">
+                                            {% for suggestion in item.suggestions %}
+                                                <li>{{ suggestion }}</li>
+                                            {% endfor %}
+                                        </ul>
+                                    </div>
+                                {% endfor %}
+                            {% elif ai_data.has_sales %}
+                                <p>There are products with minimal sales in this period, but the assistant needs more data to make recommendations.</p>
+                            {% else %}
+                                <p>No sales recorded yet. When sales begin, this assistant will recommend promotions and inventory adjustments.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <h5>Sales Momentum</h5>
                 {% if ai_data.growth_message %}
-                    <li>{{ ai_data.growth_message }}</li>
+                    <p>{{ ai_data.growth_message }}</p>
                 {% else %}
-                    {% for i in ai_data.growth_items %}
-                        <li>{{ i.name }} ({% if i.growth_pct > 0 %}+{% endif %}{{ i.growth_pct }}%)</li>
-                    {% empty %}
-                        <li>No growth trends in the current period.</li>
-                    {% endfor %}
+                    <ul>
+                        {% for item in ai_data.growth_items %}
+                            <li>
+                                {{ item.name }} is changing by
+                                <strong>{% if item.growth_pct > 0 %}+{% endif %}{{ item.growth_pct }}%</strong>
+                                compared to the prior week.
+                            </li>
+                        {% endfor %}
+                    </ul>
                 {% endif %}
-            </ul>
+            </div>
         </section>
     </div>
 

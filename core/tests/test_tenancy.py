@@ -1,5 +1,6 @@
 from decimal import Decimal
 
+from django.contrib import messages
 from django.contrib.auth.models import User
 from django.test import Client, TestCase
 from django.urls import reverse
@@ -64,7 +65,7 @@ class TenantIsolationTests(TestCase):
         response = self.client.post(
             reverse("employer-dashboard"),
             {
-                "action": "cancel_item",
+                "action": "delete_item",
                 "item_id": other_item.pk,
             },
         )
@@ -109,3 +110,39 @@ class TenantIsolationTests(TestCase):
         self.assertEqual(revenue_a, Decimal("100.00"))
         self.assertEqual(units_b, 2)
         self.assertEqual(revenue_b, Decimal("100.00"))
+
+    def test_replenishing_existing_item_increases_stock_and_updates_price(self):
+        self.client.login(username="user_a", password="pass12345")
+        session = self.client.session
+        session["active_role"] = UserProfile.ROLE_EMPLOYER
+        session.save()
+
+        response = self.client.post(
+            reverse("employer-dashboard"),
+            {
+                "action": "add_item",
+                "name": "Product A",
+                "category": "Restocked Category",
+                "unit_price": "120.00",
+                "initial_quantity": "5",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse("employer-dashboard"))
+
+        self.item_a.refresh_from_db()
+        self.assertEqual(self.item_a.current_quantity, 15)
+        self.assertEqual(self.item_a.stock_qty, 15)
+        self.assertEqual(self.item_a.initial_quantity, 15)
+        self.assertEqual(str(self.item_a.unit_price), "120.00")
+        self.assertEqual(self.item_a.category, "Restocked Category")
+        self.assertEqual(
+            Item.objects.for_business(self.business_a).filter(name="Product A").count(),
+            1,
+        )
+
+        storage = messages.get_messages(response.wsgi_request)
+        self.assertTrue(
+            any("Existing item stock increased successfully." in str(message) for message in storage)
+        )

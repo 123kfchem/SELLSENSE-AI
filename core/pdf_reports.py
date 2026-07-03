@@ -1,6 +1,8 @@
 from datetime import timedelta
 from io import BytesIO
+import base64
 
+from django.conf import settings
 from django.template.loader import render_to_string
 from django.utils import timezone
 from xhtml2pdf import pisa
@@ -30,7 +32,15 @@ PERIOD_PDF_META = {
 
 
 def _render_pdf(template_name, context, error_message):
-    html = render_to_string(template_name, context)
+    # embed corner logo as base64 so xhtml2pdf can load it reliably
+    logo_path = settings.BASE_DIR / "static" / "img" / "logo2.png"
+    corner_logo_image = ""
+    if logo_path.exists():
+        with open(logo_path, "rb") as logo_file:
+            encoded_logo = base64.b64encode(logo_file.read()).decode("ascii")
+        corner_logo_image = f"data:image/png;base64,{encoded_logo}"
+
+    html = render_to_string(template_name, {**context, "corner_logo_image": corner_logo_image})
     buffer = BytesIO()
     result = pisa.CreatePDF(html, dest=buffer)
     if result.err:
