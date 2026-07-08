@@ -6,7 +6,11 @@ from django.test import TestCase
 from django.utils import timezone
 
 from core.models import Business, Item, Sale, UserProfile
-from core.services import _split_top_and_least_selling, ai_item_suggestions
+from core.services import (
+    _build_ml_recommendation,
+    _split_top_and_least_selling,
+    ai_item_suggestions,
+)
 
 
 class SplitTopLeastSellingTests(TestCase):
@@ -52,6 +56,29 @@ class SplitTopLeastSellingTests(TestCase):
         top_names = {row["name"] for row in top}
         least_names = {row["name"] for row in least}
         self.assertFalse(top_names & least_names)
+
+
+class MLRecommendationRuleTests(TestCase):
+    def test_high_demand_low_risk_recommends_stock_increase(self):
+        recommendation = _build_ml_recommendation(85, 40, 20, 80)
+        self.assertEqual(
+            recommendation,
+            "Increase stock levels to meet growing customer demand.",
+        )
+
+    def test_low_demand_high_risk_recommends_inventory_reduction(self):
+        recommendation = _build_ml_recommendation(20, 10, 85, 25)
+        self.assertEqual(
+            recommendation,
+            "Reduce inventory to avoid overstocking.",
+        )
+
+    def test_high_demand_high_trend_recommends_marketing_focus(self):
+        recommendation = _build_ml_recommendation(80, 85, 25, 75)
+        self.assertEqual(
+            recommendation,
+            "Prioritize this item in marketing campaigns.",
+        )
 
 
 class AiItemSuggestionsTests(TestCase):

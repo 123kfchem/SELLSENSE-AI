@@ -290,6 +290,90 @@ def sales_summary(user, period="daily"):
     return sales, total_revenue, total_units
 
 
+def _build_ml_recommendation(
+    demand_score,
+    trend_score,
+    risk_score,
+    opportunity_score,
+    revenue=None,
+    avg_daily_qty=None,
+    max_revenue=None,
+    max_avg_daily_qty=None,
+):
+    revenue_ratio = (
+        (float(revenue) / float(max_revenue)) * 100.0
+        if revenue is not None and max_revenue not in (None, 0)
+        else 0.0
+    )
+    avg_daily_ratio = (
+        (float(avg_daily_qty) / float(max_avg_daily_qty)) * 100.0
+        if avg_daily_qty is not None and max_avg_daily_qty not in (None, 0)
+        else 0.0
+    )
+
+    if demand_score >= 70 and trend_score >= 70 and opportunity_score >= 70:
+        return "Prioritize this item in marketing campaigns."
+
+    if demand_score >= 75 and risk_score <= 30:
+        return "Increase stock levels to meet growing customer demand."
+
+    if 40 <= demand_score < 70 and 35 <= trend_score <= 65 and risk_score <= 45:
+        return "Maintain current inventory levels."
+
+    if demand_score <= 30 and risk_score >= 70:
+        return "Reduce inventory to avoid overstocking."
+
+    if demand_score <= 35 and trend_score <= 20:
+        return "Consider discontinuing this low-performing item."
+
+    if revenue_ratio >= 80 and 45 <= demand_score < 70:
+        return "Focus on maximizing profit margins."
+
+    if opportunity_score >= 75 and demand_score <= 40:
+        return "Increase product visibility within the store."
+
+    if trend_score >= 75 and demand_score >= 45:
+        return "Prepare for increased demand by restocking early."
+
+    if risk_score >= 70 and opportunity_score >= 60:
+        return "Review pricing strategy to improve competitiveness."
+
+    if risk_score >= 70 and revenue_ratio >= 65:
+        return "Negotiate lower supplier costs to improve margins."
+
+    if demand_score >= 60 and trend_score <= 30:
+        return "Launch promotional discounts to stimulate demand."
+
+    if opportunity_score >= 65 and demand_score >= 50:
+        return "Bundle this item with popular products."
+
+    if trend_score <= 25 and demand_score < 50:
+        return "Investigate declining sales trends."
+
+    if avg_daily_ratio >= 60 and demand_score >= 55:
+        return "Promote through social media or digital marketing."
+
+    if demand_score <= 15:
+        return "Collect customer feedback to understand weak sales."
+
+    if opportunity_score >= 60 and demand_score >= 50:
+        return "Introduce customer loyalty offers for this product."
+
+    if trend_score >= 60 and demand_score <= 35:
+        return "Watch for seasonal demand fluctuations."
+
+    if 30 <= demand_score <= 60 and trend_score <= 40 and risk_score <= 60:
+        return "Improve product placement to encourage impulse purchases."
+
+    if demand_score >= 70 and trend_score >= 45:
+        return "Monitor demand and optimize pricing."
+
+    if 35 <= demand_score <= 70 and 35 <= trend_score <= 65 and risk_score <= 45:
+        return "Monitor weekly performance before making inventory changes."
+
+    return "Monitor weekly performance before making inventory changes."
+
+
 def ml_sales_analysis_table(user, period="daily"):
     business = _tenant_business(user)
     period = _normalize_period(period)
@@ -364,6 +448,8 @@ def ml_sales_analysis_table(user, period="daily"):
     max_slope = max(slopes) if slopes else 0.0
     min_slope = min(slopes) if slopes else 0.0
     slope_span = (max_slope - min_slope) if (max_slope - min_slope) != 0 else 1.0
+    max_revenue = max((row["revenue"] for row in rows), default=0.0)
+    max_avg_daily_qty = max((row["avg_daily_qty"] for row in rows), default=0.0)
 
     for row in rows:
         demand_score = (row["total_qty"] / max_total) * 100.0 if max_total else 0.0
@@ -371,12 +457,16 @@ def ml_sales_analysis_table(user, period="daily"):
         risk_score = max(0.0, 100.0 - demand_score) * 0.6 + max(0.0, 50.0 - trend_score) * 0.4
         opportunity_score = demand_score * 0.55 + trend_score * 0.45
 
-        if trend_score > 60 and demand_score > 60:
-            recommendation = "Scale stock and promote"
-        elif trend_score < 35 and demand_score < 40:
-            recommendation = "Discount or bundle"
-        else:
-            recommendation = "Monitor and optimize pricing"
+        recommendation = _build_ml_recommendation(
+            demand_score,
+            trend_score,
+            risk_score,
+            opportunity_score,
+            revenue=row["revenue"],
+            avg_daily_qty=row["avg_daily_qty"],
+            max_revenue=max_revenue,
+            max_avg_daily_qty=max_avg_daily_qty,
+        )
 
         row["demand_score"] = round(demand_score, 2)
         row["trend_score"] = round(trend_score, 2)
