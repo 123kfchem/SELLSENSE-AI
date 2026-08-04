@@ -62,6 +62,48 @@ class SuperuserPasswordResetTests(TestCase):
         self.assertTrue(self.profile.check_employer_password("newemployer123"))
         self.assertFalse(self.profile.check_employer_password("oldemployer123"))
 
+    def test_employer_can_change_their_login_password(self):
+        self.client.login(username="biz_employer", password="oldlogin123")
+        session = self.client.session
+        session["active_role"] = UserProfile.ROLE_EMPLOYER
+        session.save()
+
+        response = self.client.post(
+            reverse("employer-dashboard"),
+            {
+                "action": "change_password",
+                "old_password": "oldlogin123",
+                "new_login_password1": "NewLogin456!",
+                "new_login_password2": "NewLogin456!",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+
+        self.employer.refresh_from_db()
+        self.assertTrue(self.employer.check_password("NewLogin456!"))
+        self.assertFalse(self.employer.check_password("oldlogin123"))
+
+    def test_employer_can_change_their_employer_password(self):
+        self.client.login(username="biz_employer", password="oldlogin123")
+        session = self.client.session
+        session["active_role"] = UserProfile.ROLE_EMPLOYER
+        session.save()
+
+        response = self.client.post(
+            reverse("employer-dashboard"),
+            {
+                "action": "change_password",
+                "old_password": "oldlogin123",
+                "new_employer_password1": "EmployerNew456!",
+                "new_employer_password2": "EmployerNew456!",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+
+        self.profile.refresh_from_db()
+        self.assertTrue(self.profile.check_employer_password("EmployerNew456!"))
+        self.assertFalse(self.profile.check_employer_password("oldemployer123"))
+
     def test_non_superuser_cannot_reset_passwords(self):
         self.client.login(username="biz_employer", password="oldlogin123")
         response = self.client.post(

@@ -6,7 +6,9 @@ from django.contrib import messages
 from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
+from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.views import LoginView
+from django.core.exceptions import ValidationError
 from django.core.mail import EmailMessage
 from django.db import transaction
 from django.db.models import Count, F, Sum
@@ -18,8 +20,6 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.text import slugify
-from django.contrib.auth.models import User
-from django.http import HttpResponse
 
 
 from .forms import (
@@ -36,15 +36,22 @@ from .forms import (
     SuperuserPasswordResetForm,
 )
 from .models import Business, Expense, Item, ItemReport, Post, Sale, UserProfile
-from .pdf_reports import PDFGenerationError, build_daily_sales_pdf, build_period_summary_pdf
+from .pdf_reports import (
+    PDFGenerationError,
+    build_daily_sales_pdf,
+    build_period_summary_pdf,
+    build_weekly_ml_report_pdf,
+)
 from .services import (
     ai_item_suggestions,
     ensure_business_year_start,
+    ensure_weekly_ml_reports,
     expenses_summary,
     ml_sales_analysis_table,
     period_profit_report,
     profit_summary,
     sales_summary,
+    weekly_ml_report_history,
     _quantize_money,
 )
 from .tenancy import (
@@ -488,7 +495,13 @@ def employer_dashboard(request):
     item_form = ItemForm()
     sale_form = SaleForm(business=business)
     ai_data = ai_item_suggestions(request.user)
-    ml_analysis_rows = ml_sales_analysis_table(request.user, "weekly")
+    ensure_weekly_ml_reports(request.user)
+    weekly_reports = weekly_ml_report_history(request.user)
+    latest_weekly_report = weekly_reports.first()
+    if latest_weekly_report:
+        ml_analysis_rows = latest_weekly_report.report_data.get("rows", [])
+    else:
+        ml_analysis_rows = []
     daily_sales, daily_revenue, daily_units = sales_summary(request.user, "daily")
     daily_profit = profit_summary(request.user, "daily")
     expenses = scoped_qs(Expense, request.user).order_by("-expense_date", "-created_at")
@@ -577,6 +590,49 @@ def employer_dashboard(request):
             messages.info(request, f"Item {item.name} marked as {item.status}.")
             return redirect("employer-dashboard")
 
+        elif action == "change_password":
+            profile = request.user.profile
+            old_password = request.POST.get("old_password", "")
+            new_login_password1 = request.POST.get("new_login_password1", "")
+            new_login_password2 = request.POST.get("new_login_password2", "")
+            new_employer_password1 = request.POST.get("new_employer_password1", "")
+            new_employer_password2 = request.POST.get("new_employer_password2", "")
+
+            if not request.user.check_password(old_password):
+                messages.error(request, "Current password is incorrect.")
+                return redirect("employer-dashboard")
+
+            changed_anything = False
+            if new_login_password1 or new_login_password2:
+                if new_login_password1 != new_login_password2:
+                    messages.error(request, "New login passwords do not match.")
+                    return redirect("employer-dashboard")
+                try:
+                    validate_password(new_login_password1, request.user)
+                except ValidationError as exc:
+                    messages.error(request, "; ".join(exc.messages))
+                    return redirect("employer-dashboard")
+                request.user.set_password(new_login_password1)
+                request.user.save(update_fields=["password"])
+                changed_anything = True
+
+            if new_employer_password1 or new_employer_password2:
+                if new_employer_password1 != new_employer_password2:
+                    messages.error(request, "New employer passwords do not match.")
+                    return redirect("employer-dashboard")
+                if len(new_employer_password1) < 8:
+                    messages.error(request, "Employer password must be at least 8 characters.")
+                    return redirect("employer-dashboard")
+                profile.set_employer_password(new_employer_password1)
+                profile.save(update_fields=["employer_password_hash"])
+                changed_anything = True
+
+            if changed_anything:
+                messages.success(request, "Your password(s) were updated successfully.")
+            else:
+                messages.info(request, "No password changes were provided.")
+            return redirect("employer-dashboard")
+
     stock_insights = _stock_insights_queryset(business)
     context = {
         **_dashboard_switch_context(request),
@@ -585,6 +641,8 @@ def employer_dashboard(request):
         "sale_form": sale_form,
         "ai_data": ai_data,
         "ml_analysis_rows": ml_analysis_rows,
+        "weekly_ml_reports": weekly_reports,
+        "latest_weekly_report": latest_weekly_report,
         "daily_sales": daily_sales,
         "daily_revenue": daily_revenue,
         "daily_units": daily_units,
@@ -679,6 +737,28 @@ def report_pdf(request, period):
         messages.error(request, "Could not generate PDF. Please try again.")
         return redirect("reports", period=period)
 
+    return _pdf_download_response(pdf_bytes, filename)
+
+
+@login_required
+def weekly_ml_report_pdf(request, report_id):
+    if not _can_access_role(request, UserProfile.ROLE_EMPLOYER):
+        return redirect("role-select")
+    business = _require_tenant_business(request)
+    if business is None:
+        return redirect("logout")
+
+    report = get_object_or_404(
+        weekly_ml_report_history(request.user).filter(pk=report_id)
+    )
+
+    try:
+        pdf_bytes = build_weekly_ml_report_pdf(report)
+    except PDFGenerationError:
+        messages.error(request, "Could not generate PDF. Please try again.")
+        return redirect("employer-dashboard")
+
+    filename = f"weekly-ml-report-{report.week_start_date}-{slugify(business.name)}.pdf"
     return _pdf_download_response(pdf_bytes, filename)
 
 

@@ -7,7 +7,7 @@ from django.db.models import F, Max, Sum
 from django.db.models.functions import TruncDate, TruncMonth, TruncWeek
 from django.utils import timezone
 
-from .models import Business, Expense, Sale
+from .models import Business, Expense, Sale, WeeklyMLReport
 from .tenancy import get_user_business
 
 VALID_PERIODS = frozenset({"daily", "weekly", "monthly", "yearly"})
@@ -59,6 +59,98 @@ def _as_date(value):
     if hasattr(value, "date") and callable(value.date):
         return value.date()
     return value
+
+
+def _ml_sales_analysis_rows_for_range(business, start_date, end_date):
+    start_dt = _aware_start_of_day(start_date)
+    end_dt = _aware_start_of_day(end_date + timedelta(days=1))
+    qs = (
+        Sale.objects.for_business(business)
+        .filter(sold_at__gte=start_dt, sold_at__lt=end_dt)
+        .values("item__id", "item__name", "sold_at__date")
+        .annotate(qty=Sum("quantity"), revenue=Sum("total_amount"))
+    )
+
+    if not qs:
+        return []
+
+    window_days = (end_date - start_date).days + 1
+    daily_item_qty = defaultdict(lambda: defaultdict(float))
+    item_name = {}
+    item_revenue = defaultdict(float)
+    for row in qs:
+        item_id = row["item__id"]
+        item_name[item_id] = row["item__name"]
+        item_revenue[item_id] += float(row["revenue"] or 0)
+        date_key = row["sold_at__date"]
+        if date_key is None:
+            continue
+        day_idx = (date_key - start_date).days
+        if day_idx < 0 or day_idx >= window_days:
+            continue
+        daily_item_qty[item_id][day_idx] += float(row["qty"] or 0)
+
+    rows = []
+    totals = []
+    slopes = []
+    for item_id, by_day in daily_item_qty.items():
+        y = [float(by_day.get(i, 0.0)) for i in range(window_days)]
+        total_qty = float(sum(y))
+        if window_days > 1:
+            n = float(window_days)
+            x_sum = sum(range(window_days))
+            y_sum = sum(y)
+            xy_sum = sum(i * y[i] for i in range(window_days))
+            x2_sum = sum(i * i for i in range(window_days))
+            denom = (n * x2_sum) - (x_sum * x_sum)
+            slope = ((n * xy_sum) - (x_sum * y_sum)) / denom if denom else 0.0
+        else:
+            slope = 0.0
+        avg_daily = total_qty / float(max(window_days, 1))
+        rows.append(
+            {
+                "item": item_name[item_id],
+                "total_qty": int(total_qty),
+                "avg_daily_qty": round(avg_daily, 2),
+                "revenue": round(item_revenue[item_id], 2),
+                "trend_slope": round(slope, 4),
+            }
+        )
+        totals.append(total_qty)
+        slopes.append(slope)
+
+    max_total = max(totals) if totals else 1.0
+    max_slope = max(slopes) if slopes else 0.0
+    min_slope = min(slopes) if slopes else 0.0
+    slope_span = (max_slope - min_slope) if (max_slope - min_slope) != 0 else 1.0
+    max_revenue = max((row["revenue"] for row in rows), default=0.0)
+    max_avg_daily_qty = max((row["avg_daily_qty"] for row in rows), default=0.0)
+
+    for row in rows:
+        demand_score = (row["total_qty"] / max_total) * 100.0 if max_total else 0.0
+        trend_score = ((row["trend_slope"] - min_slope) / slope_span) * 100.0
+        risk_score = max(0.0, 100.0 - demand_score) * 0.6 + max(0.0, 50.0 - trend_score) * 0.4
+        opportunity_score = demand_score * 0.55 + trend_score * 0.45
+
+        recommendation = _build_ml_recommendation(
+            demand_score,
+            trend_score,
+            risk_score,
+            opportunity_score,
+            revenue=row["revenue"],
+            avg_daily_qty=row["avg_daily_qty"],
+            max_revenue=max_revenue,
+            max_avg_daily_qty=max_avg_daily_qty,
+        )
+
+        row["demand_score"] = round(demand_score, 2)
+        row["trend_score"] = round(trend_score, 2)
+        row["risk_score"] = round(min(risk_score, 100.0), 2)
+        row["opportunity_score"] = round(min(opportunity_score, 100.0), 2)
+        row["recommendation"] = recommendation
+
+    rows.sort(key=lambda r: r["opportunity_score"], reverse=True)
+    return rows
 
 
 def _take_tiers_from_sorted(rows, limit):
@@ -476,6 +568,43 @@ def ml_sales_analysis_table(user, period="daily"):
 
     rows.sort(key=lambda r: r["opportunity_score"], reverse=True)
     return rows
+
+
+def weekly_ml_report_history(user):
+    business = _tenant_business(user)
+    return WeeklyMLReport.objects.for_business(business).order_by("-week_start_date")
+
+
+def ensure_weekly_ml_reports(user):
+    business = _tenant_business(user)
+    latest_report = WeeklyMLReport.objects.for_business(business).order_by("-week_start_date").first()
+    if latest_report:
+        next_start = latest_report.week_end_date + timedelta(days=1)
+    else:
+        first_sale = (
+            Sale.objects.for_business(business)
+            .order_by("sold_at")
+            .values_list("sold_at", flat=True)
+            .first()
+        )
+        if not first_sale:
+            return False
+        next_start = timezone.localtime(first_sale).date()
+
+    today = _local_today()
+    saved_any = False
+    while next_start + timedelta(days=6) <= today:
+        week_end = next_start + timedelta(days=6)
+        rows = _ml_sales_analysis_rows_for_range(business, next_start, week_end)
+        WeeklyMLReport.objects.create(
+            business=business,
+            week_start_date=next_start,
+            week_end_date=week_end,
+            report_data={"rows": rows},
+        )
+        saved_any = True
+        next_start += timedelta(days=7)
+    return saved_any
 
 
 def weekly_revenue_report(user):

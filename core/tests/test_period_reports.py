@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 from decimal import Decimal
 
 from django.contrib.auth.models import User
@@ -5,8 +6,16 @@ from django.test import Client, TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from core.models import Business, Item, Sale, UserProfile
-from core.services import monthly_revenue_report, weekly_revenue_report, yearly_revenue_report, ensure_business_year_start, _current_business_year_start
+from core.models import Business, Item, Sale, UserProfile, WeeklyMLReport
+from core.services import (
+    monthly_revenue_report,
+    weekly_revenue_report,
+    yearly_revenue_report,
+    ensure_business_year_start,
+    ensure_weekly_ml_reports,
+    weekly_ml_report_history,
+    _current_business_year_start,
+)
 
 
 class PeriodRevenueReportTests(TestCase):
@@ -49,6 +58,18 @@ class PeriodRevenueReportTests(TestCase):
         self.assertEqual(len(report["rows"]), 7)
         self.assertEqual(report["total_revenue"], Decimal("50.00"))
         self.assertNotIn("item", report["rows"][0])
+
+    def test_weekly_ml_reports_are_generated_and_stored(self):
+        sale_date = timezone.localtime(timezone.now()).date() - timedelta(days=8)
+        self._record_sale(Decimal("100.00"), when=timezone.make_aware(datetime.combine(sale_date, datetime.min.time())))
+        generated = ensure_weekly_ml_reports(self.user)
+        self.assertTrue(generated)
+        reports = weekly_ml_report_history(self.user)
+        self.assertEqual(reports.count(), 1)
+        report = reports.first()
+        self.assertEqual(report.week_start_date, sale_date)
+        self.assertEqual(report.week_end_date, sale_date + timedelta(days=6))
+        self.assertIn("rows", report.report_data)
 
     def test_monthly_and_yearly_reports_aggregate_revenue(self):
         self._record_sale(Decimal("120.00"))

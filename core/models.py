@@ -257,6 +257,20 @@ class Expense(TenantModel):
         return f"{self.amount} on {self.expense_date}"
 
 
+class WeeklyMLReport(TenantModel):
+    week_start_date = models.DateField()
+    week_end_date = models.DateField()
+    report_data = models.JSONField()
+    generated_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("business", "week_start_date")
+        ordering = ["-week_start_date"]
+
+    def __str__(self):
+        return f"Weekly ML report {self.week_start_date} – {self.week_end_date}"
+
+
 class Post(models.Model):
     author = models.ForeignKey(
         settings.AUTH_USER_MODEL,

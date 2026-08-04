@@ -6,14 +6,67 @@
         {% if can_switch_to_employee %}
             <a class="btn btn-outline-primary btn-sm" href="{% url 'employee-dashboard' %}">Employee sales view</a>
         {% endif %}
+
+         <div class="justify-content-end mb-3">
+        <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#changePasswordModal">
+            Change Password
+        </button>
     </div>
+    </div>
+   
+<style>
+    .justify-content-end {
+        display: flex;
+        width: 35%;
+    }
+</style>
+    <div class="modal fade" id="changePasswordModal" tabindex="-1" aria-labelledby="changePasswordModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-sm modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="changePasswordModalLabel">Change Password</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form method="post" class="row g-3 align-items-end">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="change_password">
+                        <div class="col-md-6">
+                            <label for="old_password" class="form-label">Current password</label>
+                            <input type="password" id="old_password" name="old_password" class="form-control" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="new_login_password1" class="form-label">New login password</label>
+                            <input type="password" id="new_login_password1" name="new_login_password1" class="form-control">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="new_login_password2" class="form-label">Confirm login password</label>
+                            <input type="password" id="new_login_password2" name="new_login_password2" class="form-control">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="new_employer_password1" class="form-label">New employer password</label>
+                            <input type="password" id="new_employer_password1" name="new_employer_password1" class="form-control">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="new_employer_password2" class="form-label">Confirm employer password</label>
+                            <input type="password" id="new_employer_password2" name="new_employer_password2" class="form-control">
+                        </div>
+                        <div class="col-12 mt-2">
+                            <button type="submit" class="btn btn-primary">Update Passwords</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="tabs" data-tabs>
         <button type="button" class="tab-btn active" data-tab-target="tab-items">Items</button>
         <button type="button" class="tab-btn" data-tab-target="tab-ai">AI Suggestions</button>
         <button type="button" class="tab-btn" data-tab-target="tab-analysis">Data Analysis</button>
         <button type="button" class="tab-btn" data-tab-target="tab-expenses">Expenses</button>
         <button type="button" class="tab-btn" data-tab-target="tab-reports">Quick Reports</button>
-        <button type="button" class="tab-btn" data-tab-target="tab-analytics">Analytics Charts</button>
+        <button type="button" class="tab-btn d-none d-lg-inline-block" data-tab-target="tab-analytics">Analytics Charts</button>
     </div>
 
     <div id="tab-items" class="tab-panel active">
@@ -211,7 +264,15 @@
 
     <div id="tab-analysis" class="tab-panel">
         <section class="card">
-            <h3>ML Data Analysis (Weekly)</h3>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <h3 class="mb-1">ML Data Analysis (Weekly)</h3>
+                    <p class="text-muted mb-0">This report is created once each completed week and stored for later review.</p>
+                </div>
+                {% if latest_weekly_report %}
+                <a class="btn btn-outline-secondary btn-sm" href="{% url 'weekly-ml-report-pdf' latest_weekly_report.pk %}">Export Latest Weekly PDF</a>
+                {% endif %}
+            </div>
             <div class="table-responsive">
             <table class="table table-striped table-hover align-middle">
                 <thead>
@@ -245,6 +306,34 @@
                     {% endfor %}
                 </tbody>
             </table>
+            </div>
+        </section>
+
+        <section class="card mt-3">
+            <h3>Weekly ML Report History</h3>
+            <div class="table-responsive">
+                <table class="table table-striped table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th>Week</th>
+                            <th>Generated</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for report in weekly_ml_reports %}
+                        <tr>
+                            <td>{{ report.week_start_date|date:"d M Y" }} – {{ report.week_end_date|date:"d M Y" }}</td>
+                            <td>{{ report.generated_at|date:"Y-m-d H:i" }}</td>
+                            <td>
+                                <a class="btn btn-outline-secondary btn-sm" href="{% url 'weekly-ml-report-pdf' report.pk %}">Export PDF</a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="3">No weekly ML reports have been generated yet.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
         </section>
     </div>

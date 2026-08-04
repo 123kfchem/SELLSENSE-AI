@@ -90,3 +90,18 @@ def build_period_summary_pdf(period, context):
         full_context,
         f"Failed to generate {period} report PDF.",
     )
+
+
+def build_weekly_ml_report_pdf(report):
+    context = {
+        "business_name": report.business.name,
+        "report_date": timezone.localtime(timezone.now()).date(),
+        "week_start_date": report.week_start_date,
+        "week_end_date": report.week_end_date,
+        "report_rows": report.report_data.get("rows", []),
+    }
+    return _render_pdf(
+        "pdf/weekly_ml_report.html",
+        context,
+        "Failed to generate weekly ML report PDF.",
+    )

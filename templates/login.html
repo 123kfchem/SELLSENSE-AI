@@ -7,14 +7,27 @@
         {{ form.non_field_errors }}
         {{ form.as_p }}
         <button type="submit" class="btn btn-primary w-100">Sign In</button>
+        
     </form>
 </section>
 
     
-    <section>
-    <div class="class">
-        
-    </div>
-
-    </section>
+<style>
+    .auth-card {
+        max-width: 50%;
+        margin: 50px auto;
+        padding: 30px;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        background-color: #fff;
+    }
+    .auth-card h2 {
+        text-align: center;
+        margin-bottom: 20px;
+    }
+    .auth-card form {
+        display: flex;
+        flex-direction: column;
+    }
+    </style>
 {% endblock %}
